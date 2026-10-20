@@ -20,7 +20,7 @@ It is a benchmark harness, not a new grouping method.
 6. **Estimate hypermutation** per read with SHazaM.
 7. **Score** every method against the known answers (`bin/score_clones.py`), then collect one table over all levels, error rates and methods.
 
-Every tool runs in a container named by digest in `images.lock`. The pipeline refuses to start with an image that is not pinned. partis draws each family's tree with the R package TreeSim, which the published partis image lacks, so the lineage step runs in a small image built on the pinned partis digest that adds R 4.5.3 and TreeSim 2.4 from conda-forge, fixed by build string (`containers/partis-r`).
+Every tool runs in a container named by digest in `images.lock`. The pipeline refuses to start with an image that is not pinned. partis draws each family's tree with the R package TreeSim, which the published partis image lacks, so the lineage step runs in a small image built on the pinned partis digest that adds R 4.5.3 and TreeSim 2.4 from conda-forge, fixed by build string (`containers/partis-r`). CI rebuilds that small image on every run, so its own digest differs from run to run; the pinned part is the base partis digest in `images.lock` it is built on, and the R and TreeSim builds it adds.
 
 ## What is scored
 

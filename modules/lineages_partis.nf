@@ -15,10 +15,13 @@
 // script lists the task folder so the run log shows what was staged.
 // partis rearranges from the human IGH germline set it ships, not from a set
 // it generates (CI run 9: a generated 55-allele set had alleles that rarely
-// give productive rearrangements, and one sub-process kept retrying); the
-// script stops at once if the installed partis lacks the option, after
-// printing the help lines and partis source lines that name it (CI run 10:
-// the option was not in 'partis simulate --help'). matplotlib
+// give productive rearrangements, and one sub-process kept retrying). This
+// partis spells the switch --force-dont-generate-germline-set: bin/partis line
+// 1796 adds it to subargs['simulate'] (store_true), and python/processargs.py
+// line 472 turns generate_germline_set on whenever rearrange_from_scratch is
+// set unless that switch is given (CI run 11 evidence). The script stops at
+// once if the installed partis lacks it, after printing the help lines and
+// partis source lines that name the germline set. matplotlib
 // writes its cache in the task folder (MPLCONFIGDIR).
 process LINEAGES_PARTIS {
     container params.partis_image
@@ -62,8 +65,8 @@ process LINEAGES_PARTIS {
         echo "partis help, first 40 lines:" >&2; head -n 40 partis_help_${level}.txt >&2
         src=\$(grep -rn -e 'generate-germline-set' -e 'generate_germline_set' /partis/bin/partis /partis/python 2>/dev/null | head -n 40)
         echo "partis source lines naming the germline-set option:" >&2; if [ -n "\$src" ]; then printf '%s\\n' "\$src" >&2; else echo "(none)" >&2; fi
-        { grep -q -- '--dont-generate-germline-set' partis_help_${level}.txt || grep -rqE 'add_argument[(].--dont-generate-germline-set.' /partis/bin/partis /partis/python 2>/dev/null; } || { echo "partis in ${params.partis_image} has no --dont-generate-germline-set in partis_help_${level}.txt or its source (lines above); cannot pin the shipped germline set" >&2; exit 2; }
-        partis simulate --simulate-from-scratch --dont-generate-germline-set --n-sim-events ${params.n_founders} \\
+        { grep -q -- '--force-dont-generate-germline-set' partis_help_${level}.txt || grep -qF "subargs['simulate'].append({'name' : '--force-dont-generate-germline-set'" /partis/bin/partis; } || { echo "partis in ${params.partis_image} has no --force-dont-generate-germline-set in partis_help_${level}.txt or in bin/partis's simulate options (lines above); cannot pin the shipped germline set" >&2; exit 2; }
+        partis simulate --simulate-from-scratch --force-dont-generate-germline-set --n-sim-events ${params.n_founders} \\
             --n-leaves ${params.mean_family_size} --mutation-multiplier ${mult} --seed ${params.seed} \\
             --outfname simu_${level}.yaml --airr-output
         python3 ${airr_truth_py} --airr simu_${level}.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv

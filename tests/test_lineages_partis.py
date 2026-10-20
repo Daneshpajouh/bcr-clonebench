@@ -72,8 +72,8 @@ class LineagesPartisScript(unittest.TestCase):
         ls = lines(block)
         sims = [i for i, ln in enumerate(ls) if ln.startswith("partis simulate --simulate-from-scratch")]
         self.assertEqual(len(sims), 1)
-        self.assertIn("--dont-generate-germline-set", ls[sims[0]])
-        checks = [i for i, ln in enumerate(ls) if "grep -q -- '--dont-generate-germline-set'" in ln]
+        self.assertIn("--force-dont-generate-germline-set", ls[sims[0]])
+        checks = [i for i, ln in enumerate(ls) if "grep -q -- '--force-dont-generate-germline-set'" in ln]
         self.assertEqual(len(checks), 1)
         self.assertLess(checks[0], sims[0])
         self.assertIn("partis_help_${level}.txt", ls[checks[0]])
@@ -93,15 +93,16 @@ class LineagesPartisScript(unittest.TestCase):
         # CI run 10: the guard stopped the run and nothing showed why; print the help lines and
         # the partis source lines that name the option first, and accept the option from either.
         ls = lines(script_blocks()[1])
-        guard = next(i for i, ln in enumerate(ls) if "grep -q -- '--dont-generate-germline-set'" in ln)
+        guard = next(i for i, ln in enumerate(ls) if "grep -q -- '--force-dont-generate-germline-set'" in ln)
         before = "\n".join(ls[:guard])
         self.assertIn("grep -n -i germline partis_help_${level}.txt >&2", before)
         self.assertIn("head -n 40 partis_help_${level}.txt >&2", before)
         self.assertIn("/partis/bin/partis /partis/python", before)
         self.assertIn('if [ -n "\\$src" ]', before)       # '(none)' printed when the source has no match
-        # from the source, only a defined option counts, not any mention of the words
-        self.assertIn("add_argument", ls[guard])
-        self.assertIn("--dont-generate-germline-set", ls[guard])
+        # from the source, only the option as bin/partis defines it for simulate counts (CI run 11:
+        # partis builds options from dicts, so an add_argument pattern found nothing)
+        self.assertIn("subargs['simulate'].append({'name' : '--force-dont-generate-germline-set'", ls[guard])
+        self.assertIn("grep -qF", ls[guard])
 
 
 class Workflow(unittest.TestCase):
