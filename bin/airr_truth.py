@@ -6,13 +6,19 @@
 simu.tsv is the AIRR rearrangement table a simulator writes for its own
 true annotations (partis simulate with AIRR output): one row per
 simulated sequence with sequence_id, sequence, clone_id, v_call, d_call,
-j_call, sequence_alignment, germline_alignment and v_alignment_end (or
-v_sequence_end, counted on the sequence).
+j_call, sequence_alignment and germline_alignment, plus the V stretch:
+either v_alignment_end (the AIRR position in sequence_alignment) or, as
+partis writes it, v_sequence_alignment with v_germline_alignment.
 
-true_mu_freq is the share of V positions in the alignment (up to
-v_alignment_end, gaps skipped) where the sequence differs from its
-germline: the stretch the pipeline's mutation step scores. A row without
-the alignments is refused, never given a guessed answer.
+true_mu_freq is the share of V positions (gaps and germline N skipped)
+where the sequence differs from its germline: the stretch the pipeline's
+mutation step scores. partis's AIRR table (partis/utils.py, airr_headers
+and get_airr_line) has no v_alignment_end column; its
+v_sequence_alignment and v_germline_alignment are the V slice of
+sequence_alignment and germline_alignment, cut at the same place, so
+they are read directly and checked to sit at one offset in both full
+alignments. A row with neither form is refused, never given a guessed
+answer, since score_clones.py scores against true_mu_freq.
 
 Standard library only.
 """
@@ -25,15 +31,37 @@ NEED = ("sequence_id", "sequence", "clone_id", "v_call", "j_call", "sequence_ali
 TRUTH = ("sequence_id", "true_clone_id", "true_v_call", "true_d_call", "true_j_call", "true_mu_freq", "level")
 
 
-def v_mu(row):
+def v_stretch(row):
+    """The V part of the alignment as (sequence, germline, route)."""
     seq, germ = row["sequence_alignment"].upper(), row["germline_alignment"].upper()
     if len(seq) != len(germ):
         raise ValueError(f"{row['sequence_id']}: sequence and germline alignments differ in length")
-    end = row.get("v_alignment_end") or ""
-    end = int(end) if end.strip() else None
-    if end is None:
-        raise ValueError(f"{row['sequence_id']}: no v_alignment_end")
-    pairs = [(s, g) for s, g in zip(seq[:end], germ[:end]) if s not in ".-" and g not in ".-N"]
+    end = (row.get("v_alignment_end") or "").strip()
+    if end:
+        if not end.isdigit():
+            raise ValueError(f"{row['sequence_id']}: v_alignment_end {end!r} is not a position")
+        return seq[:int(end)], germ[:int(end)], "v_alignment_end"
+    v_seq = (row.get("v_sequence_alignment") or "").strip().upper()
+    v_germ = (row.get("v_germline_alignment") or "").strip().upper()
+    if not (v_seq and v_germ):
+        raise ValueError(f"{row['sequence_id']}: no v_alignment_end and no v_sequence_alignment"
+                         " with v_germline_alignment")
+    if len(v_seq) != len(v_germ):
+        raise ValueError(f"{row['sequence_id']}: v_sequence_alignment and v_germline_alignment differ in length")
+    at = seq.find(v_seq)
+    while at >= 0 and germ[at:at + len(v_germ)] != v_germ:
+        at = seq.find(v_seq, at + 1)
+    if at < 0:
+        raise ValueError(f"{row['sequence_id']}: v_sequence_alignment and v_germline_alignment"
+                         " are not one slice of sequence_alignment and germline_alignment")
+    return v_seq, v_germ, "v_sequence_alignment"
+
+
+def v_mu(row, routes=None):
+    seq, germ, route = v_stretch(row)
+    if routes is not None:
+        routes[route] = routes.get(route, 0) + 1
+    pairs = [(s, g) for s, g in zip(seq, germ) if s not in ".-" and g not in ".-N"]
     if not pairs:
         raise ValueError(f"{row['sequence_id']}: empty V alignment")
     return sum(s != g for s, g in pairs) / len(pairs)
@@ -43,7 +71,7 @@ def first_call(call):
     return (call or "").split(",")[0].strip()
 
 
-def convert(rows, level):
+def convert(rows, level, routes=None):
     seen = set()
     for r in rows:
         missing = [c for c in NEED if not r.get(c)]
@@ -55,7 +83,20 @@ def convert(rows, level):
         yield r["sequence_id"], r["sequence"].upper(), {
             "sequence_id": r["sequence_id"], "true_clone_id": r["clone_id"], "true_v_call": first_call(r["v_call"]),
             "true_d_call": first_call(r.get("d_call")), "true_j_call": first_call(r["j_call"]),
-            "true_mu_freq": f"{v_mu(r):.6f}", "level": level}
+            "true_mu_freq": f"{v_mu(r, routes):.6f}", "level": level}
+
+
+def show_head(path, n=2):
+    """On a failure, print the table's header line and first n data rows to stderr."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            lines = [f.readline() for _ in range(n + 1)]
+    except OSError:
+        return
+    print(f"airr_truth: {path}: header and first {n} data rows follow", file=sys.stderr)
+    for line in lines:
+        if line:
+            sys.stderr.write(line if line.endswith("\n") else line + "\n")
 
 
 def main(argv=None):
@@ -65,14 +106,16 @@ def main(argv=None):
     ap.add_argument("--reads", required=True)
     ap.add_argument("--truth", required=True)
     a = ap.parse_args(argv)
+    routes = {}
     try:
         with open(a.airr, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f, delimiter="\t"))
         if not rows:
             raise ValueError(f"{a.airr}: no rows")
-        out = list(convert(rows, a.level))
+        out = list(convert(rows, a.level, routes))
     except (OSError, ValueError) as e:
         print(f"airr_truth: {e}", file=sys.stderr)
+        show_head(a.airr)
         return 2
     with open(a.reads, "w", encoding="utf-8") as fa, open(a.truth, "w", newline="", encoding="utf-8") as ft:
         w = csv.DictWriter(ft, fieldnames=TRUTH, delimiter="\t", lineterminator="\n")
@@ -81,6 +124,8 @@ def main(argv=None):
             fa.write(f">{sid}\n{seq}\n")
             w.writerow(truth)
     print(f"{len(out)} reads, {len({t['true_clone_id'] for _, _, t in out})} families, level {a.level}")
+    print("airr_truth: V stretch from " + ", ".join(f"{k} in {n} rows" for k, n in sorted(routes.items())),
+          file=sys.stderr)
     return 0
 
 

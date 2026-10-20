@@ -60,6 +60,7 @@ jobs:
           name: results
           path: results/
       # CI run 10: a failed task left nothing to read; keep each task's script, logs and partis help text.
+      # CI run 14: also keep the simulator's AIRR table, so a failed read of it can be checked by hand.
       - name: Keep the task folders' scripts and logs when a step failed
         if: failure()
         uses: actions/upload-artifact@v4
@@ -72,5 +73,6 @@ jobs:
             work/**/.command.log
             work/**/partis_help_*.txt
             work/**/parse_output_help_*.txt
+            work/**/simu_*.tsv
           if-no-files-found: warn
           retention-days: 7

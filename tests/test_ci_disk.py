@@ -31,6 +31,14 @@ class WorkflowTest(unittest.TestCase):
             self.assertIn(path, step)
 
 
+    def test_a_failed_task_keeps_the_simulators_airr_table(self):
+        # CI run 14: airr_truth.py refused partis's table; the table itself must reach the failed-task artifact.
+        text = read(".github", "workflows", "ci.yml")
+        step = text[text.index("name: failed-task-logs"):]
+        step = step[:step.index("retention-days")]
+        self.assertIn("work/**/simu_*.tsv", step)
+
+
 class PinTargetTest(unittest.TestCase):
     def setUp(self):
         self.lines = recipe(read("Makefile"), "pin")

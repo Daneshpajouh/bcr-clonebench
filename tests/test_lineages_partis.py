@@ -130,6 +130,11 @@ class LineagesPartisScript(unittest.TestCase):
         self.assertIn("cat parse_output_help_${level}.txt >&2", stop)
         self.assertIn("exit 1", stop)
         self.assertEqual(ls[sim:listing].count("fi"), 1)
+        # CI run 13 tidy: the help call keeps its own exit code, so the conversion's rc is not reset after it.
+        self.assertTrue(any(ln.startswith("help_rc=0; parse-output.py --help") and ln.endswith("|| help_rc=\\$?")
+                            for ln in ls[sim:conv]))
+        self.assertIn("(exit \\$rc)", stop)
+        self.assertIn("(exit \\$help_rc)", stop)
 
 
 class Workflow(unittest.TestCase):
