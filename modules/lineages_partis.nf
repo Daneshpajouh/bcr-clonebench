@@ -32,6 +32,9 @@
 process LINEAGES_PARTIS {
     container params.partis_image
     tag "${level}"
+    // The help text goes into the results too, so a README label can cite the installed version (Director ruling
+    // 2026-10-20: options are read from --help in the image before they are named).
+    publishDir "${params.outdir}/tool-help", mode: 'copy', pattern: 'partis_help_*.txt'
 
     input:
     val level

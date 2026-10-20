@@ -50,7 +50,7 @@ workflow {
                          file("${projectDir}/bin/drop_reasons.py"))
     thresholds = THRESHOLD(annotated.db, file("${projectDir}/bin/threshold.R"))   // [level, db, threshold file]
     methods = Channel.fromList(params.methods)
-    clones = CLONES(thresholds.combine(methods), file("${projectDir}/bin/clones_scoper.R"))   // [level, method, clones]
+    clones = CLONES(thresholds.combine(methods), file("${projectDir}/bin/clones_scoper.R")).clones   // [level, method, clones]
     mutated = MUTATION(clones, file(params.reference_dir), file("${projectDir}/bin/mutation.R"))  // [level, method, clones with mu_freq]
     truths = noisy.map { label, reads, truth -> [label, truth] }
     scores = SCORE(mutated.combine(truths, by: 0).combine(annotated.drops, by: 0))   // json per level and method
