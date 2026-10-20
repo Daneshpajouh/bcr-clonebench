@@ -38,6 +38,15 @@ class WorkflowTest(unittest.TestCase):
         step = step[:step.index("retention-days")]
         self.assertIn("work/**/simu_*.tsv", step)
 
+    def test_no_action_runs_on_node_20(self):
+        # CI run 15: the job warned that Node.js 20 actions are deprecated. upload-artifact v6 and setup-nextflow v3
+        # run on Node 24 (their action.yml files, read 2026-10-20); v4 and v2 ran on, or pinned actions on, Node 20.
+        text = read(".github", "workflows", "ci.yml")
+        self.assertNotIn("actions/upload-artifact@v4", text)
+        self.assertNotIn("nf-core/setup-nextflow@v2", text)
+        self.assertEqual(text.count("actions/upload-artifact@v6"), 2)
+        self.assertEqual(text.count("nf-core/setup-nextflow@v3"), 2)
+
 
 class PinTargetTest(unittest.TestCase):
     def setUp(self):

@@ -3,7 +3,7 @@ process SCORE {
     tag "${level} ${method}"
 
     input:
-    tuple val(level), val(method), path(mutated), path(truth)
+    tuple val(level), val(method), path(mutated), path(truth), path(drops)
 
     output:
     path "score_${level}_${method}.json"
@@ -11,7 +11,7 @@ process SCORE {
     script:
     """
     score_clones.py --truth ${truth} --pred ${mutated} --mu-column mu_freq --label ${level}/${method} \\
-        --out-json score_${level}_${method}.json
+        --drops ${drops} --out-json score_${level}_${method}.json
     """
 }
 

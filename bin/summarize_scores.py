@@ -13,15 +13,22 @@ import json
 import sys
 
 LEVEL_ORDER = {"low": 0, "medium": 1, "high": 2}
-COLUMNS = ("level", "error_rate", "method", "n_truth", "n_dropped", "pair_precision", "pair_recall", "pair_f1",
-           "ari", "v_gene_exact", "j_gene_exact", "mu_mae", "clones_true", "clones_predicted")
+COLUMNS = ("level", "error_rate", "method", "n_truth", "n_dropped", "n_not_annotated", "n_not_productive",
+           "n_dropped_later", "pair_precision", "predicted_pairs", "pair_recall", "pair_f1", "ari", "v_gene_exact",
+           "v_gene_exact_kept", "j_gene_exact", "j_gene_exact_kept", "mu_mae", "clones_true", "clones_predicted")
 
 
 def row(score):
     run, _, method = score["label"].partition("/")
     level, _, rate = run.partition("_e")
     a = score["all"]
-    return {"level": level, "error_rate": float(rate) if rate else None, "method": method,
+    why = score.get("dropped_by_reason")
+    kept = lambda k: (score.get(k) or {}).get("exact")  # noqa: E731
+    return {"n_not_annotated": why.get("not_annotated", 0) if why is not None else None,
+            "n_not_productive": why.get("not_productive", 0) if why is not None else None,
+            "n_dropped_later": (why.get("dropped_later", 0) + why.get("other", 0)) if why is not None else None,
+            "predicted_pairs": a.get("predicted_pairs"), "v_gene_exact_kept": kept("v_gene_kept"),
+            "j_gene_exact_kept": kept("j_gene_kept"),"level": level, "error_rate": float(rate) if rate else None, "method": method,
             "n_truth": score["n_truth"], "n_dropped": score["n_dropped"],
             "pair_precision": a["pair_precision"], "pair_recall": a["pair_recall"], "pair_f1": a["pair_f1"],
             "ari": a["ari"], "v_gene_exact": score["v_gene"]["exact"], "j_gene_exact": score["j_gene"]["exact"],

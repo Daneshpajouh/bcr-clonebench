@@ -54,7 +54,7 @@ class StagedBinScripts(unittest.TestCase):
                 self.assertIn(f"{INTERPRETER[ext]} ${{{var}}}", body(text), f"{name}: {var}")
                 found[var] = name
         self.assertEqual(sorted(found), sorted([
-            "airr_truth_py", "clones_scoper_r", "mutation_r", "prepare_founders_py",
+            "airr_truth_py", "clones_scoper_r", "drop_reasons_py", "mutation_r", "prepare_founders_py",
             "simulate_founders_r", "threshold_r"]))
 
     def test_workflow_passes_each_script_from_the_project_bin(self):

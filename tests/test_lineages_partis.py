@@ -145,7 +145,7 @@ class Workflow(unittest.TestCase):
         self.assertIn("if: failure()", step.split("- ", 1)[0] + step[:400])
         for pattern in ("work/**/.command.err", "work/**/.command.sh", "work/**/partis_help_*.txt"):
             self.assertIn(pattern, step)
-        results = ci.split("name: results", 1)[0].rsplit("- uses: actions/upload-artifact@v4", 1)[1]
+        results = ci.split("name: results", 1)[0].rsplit("- uses: actions/upload-artifact@v6", 1)[1]
         self.assertIn("if: always()", results)
 
 

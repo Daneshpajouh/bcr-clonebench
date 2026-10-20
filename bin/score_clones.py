@@ -14,7 +14,12 @@ sequence_id, clone_id, v_call and j_call, and the column named by
 Every truth sequence is scored. A sequence the pipeline dropped (failed
 QC or annotation) counts as its own one-sequence clone and as a wrong V
 and J call, so dropping hard reads cannot raise a score. The same
-metrics on the retained sequences only are reported beside them.
+metrics on the retained sequences only are reported beside them, with
+the V and J calls of the kept reads (v_gene_kept, j_gene_kept).
+
+With --drops (the annotation step's drops table: sequence_id, reason),
+n_dropped is split by reason; a truth read dropped after annotation, or
+not named in the table, counts as dropped_later.
 
 Standard library only, so CI needs nothing installed.
 """
@@ -106,7 +111,7 @@ def clone_sizes(labels):
     return list(sizes.values())
 
 
-def score(truth, pred, mu_column=None):
+def score(truth, pred, mu_column=None, drops=None):
     by_id = {r["sequence_id"]: r for r in pred}
     unknown = [i for i in by_id if i not in {r["sequence_id"] for r in truth}]
     if unknown:
@@ -135,6 +140,16 @@ def score(truth, pred, mu_column=None):
     out["retained"] = pair_scores([t_lab[i] for i in kept], [p_lab[i] for i in kept]) if kept else None
     out["v_gene"] = call_scores(t_v, p_v)
     out["j_gene"] = call_scores(t_j, p_j)
+    out["v_gene_kept"] = call_scores([t_v[i] for i in kept], [p_v[i] for i in kept]) if kept else None
+    out["j_gene_kept"] = call_scores([t_j[i] for i in kept], [p_j[i] for i in kept]) if kept else None
+    if drops is not None:
+        kept_ids = {truth[i]["sequence_id"] for i in kept}
+        by_reason = {}
+        for r in truth:
+            if r["sequence_id"] not in kept_ids:
+                reason = drops.get(r["sequence_id"], "dropped_later")
+                by_reason[reason] = by_reason.get(reason, 0) + 1
+        out["dropped_by_reason"] = by_reason
     if mu_column:
         out["mu_freq"] = ({"n": len(mu_err), "mean_abs_error": sum(abs(e) for e in mu_err) / len(mu_err),
                            "mean_error": sum(mu_err) / len(mu_err)} if mu_err else {"n": 0})
@@ -150,11 +165,14 @@ def main(argv=None):
     ap.add_argument("--pred", required=True)
     ap.add_argument("--mu-column", help="column of the hypermutation estimate in --pred")
     ap.add_argument("--label", default="", help="written into the output, e.g. the mutation level")
+    ap.add_argument("--drops", help="the annotation step's drops table (sequence_id, reason)")
     ap.add_argument("--out-json", required=True)
     a = ap.parse_args(argv)
     try:
+        drops = ({r["sequence_id"]: r["reason"] for r in read_tsv(a.drops, ("sequence_id", "reason"))}
+                 if a.drops else None)
         res = score(read_tsv(a.truth, TRUTH_COLUMNS),
-                    read_tsv(a.pred, PRED_COLUMNS + ((a.mu_column,) if a.mu_column else ())), a.mu_column)
+                    read_tsv(a.pred, PRED_COLUMNS + ((a.mu_column,) if a.mu_column else ())), a.mu_column, drops)
     except (OSError, ValueError) as e:
         print(f"score_clones: {e}", file=sys.stderr)
         return 2
