@@ -43,6 +43,11 @@ class DockerfileTest(unittest.TestCase):
             "https://cran.r-project.org/src/contrib/Archive/immuneSIM/immuneSIM_0.8.7.tar.gz",
         )
 
+    def test_apt_lists_removed_in_same_layer(self):
+        layer = re.search(r"^RUN apt-get update.*?(?=^\S)", self.text, re.M | re.S).group(0)
+        self.assertIn("--no-install-recommends", layer)
+        self.assertIn("rm -rf /var/lib/apt/lists/*", layer)
+
     def test_snapshot_and_bioc_fixed(self):
         self.assertRegex(arg(self.text, "CRAN_SNAPSHOT") or "", r"/cran/\d{4}-\d{2}-\d{2}$")
         self.assertRegex(arg(self.text, "BIOC_VERSION") or "", r"^\d+\.\d+$")

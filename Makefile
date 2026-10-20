@@ -16,12 +16,17 @@ test:
 stub:
 	nextflow run main.nf -stub -profile test
 
-# Pull and build the images, then write their digests into images.lock.
+# Build and pull the images, then write their digests into images.lock.
 # A pulled image already locked by digest must still resolve to it, or this stops.
+# The R build goes first, while the disk is emptiest, then one pull at a time;
+# free space is printed after each image.
 pin:
-	docker pull $(SUITE_TAG)
-	docker pull $(PARTIS_TAG)
 	docker build -t $(IMMUNESIM_TAG) containers/immunesim
+	df -h /
+	docker pull $(SUITE_TAG)
+	df -h /
+	docker pull $(PARTIS_TAG)
+	df -h /
 	python3 bin/pin_images.py images.lock suite_image $(SUITE_TAG) immunesim_image $(IMMUNESIM_TAG) partis_image $(PARTIS_TAG)
 
 # The germline reference, built inside the pinned suite image.

@@ -18,7 +18,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 curl ca-certificates \
       libcurl4-openssl-dev libssl-dev libxml2-dev libglpk-dev libgmp3-dev \
       zlib1g-dev libicu-dev \
- && apt-get clean
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 # Fetch and check the tarball before the long package builds, so a changed
 # archive file fails in seconds.
 RUN curl -fsSL -o /opt/immuneSIM_0.8.7.tar.gz "${IMMUNESIM_URL}" \
