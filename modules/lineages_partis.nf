@@ -45,7 +45,11 @@ process LINEAGES_PARTIS {
     path "partis_help_${level}.txt", emit: help
 
     script:
-    def mult = params.mutation_multiplier[level]
+    // <level>_shared (params.shared_vj): the level's mutation, with one V and one J allele and one junction length
+    def shared = level.endsWith('_shared')
+    def mult = params.mutation_multiplier[level.replaceAll(/_shared$/, '')]
+    def shared_args = shared ? "--only-genes '${params.shared_vj_genes}' --allowed-cdr3-lengths ${params.shared_junction_length}" : ''
+    def shared_genes = shared ? params.shared_vj_genes.tokenize(':').collect { "'${it}'" }.join(' ') : ''  // quoted: allele names hold '*'
     if (params.lineage_mode == 'bcr-phylo')
         """
         export PATH=/partis/bin:/opt/conda/bin:/opt/conda/envs/r/bin:\$PATH
@@ -74,9 +78,13 @@ process LINEAGES_PARTIS {
         echo "partis help, first 40 lines:" >&2; head -n 40 partis_help_${level}.txt >&2
         src=\$(grep -rn -e 'generate-germline-set' -e 'generate_germline_set' /partis/bin/partis /partis/python 2>/dev/null | head -n 40)
         echo "partis source lines naming the germline-set option:" >&2; if [ -n "\$src" ]; then printf '%s\\n' "\$src" >&2; else echo "(none)" >&2; fi
+        for g in ${shared_genes}; do
+            hit=\$(grep -rlF ">\$g" /partis/data/germlines/human/igh/ 2>/dev/null | head -n 1)
+            test -n "\$hit" || { echo "\$g is not in partis's shipped human IGH germline set; first names there:" >&2; grep -h '^>' /partis/data/germlines/human/igh/*.fasta 2>/dev/null | head -n 20 >&2; exit 2; }
+        done
         { grep -q -- '--force-dont-generate-germline-set' partis_help_${level}.txt || grep -qF "subargs['simulate'].append({'name' : '--force-dont-generate-germline-set'" /partis/bin/partis; } || { echo "partis in ${params.partis_image} has no --force-dont-generate-germline-set in partis_help_${level}.txt or in bin/partis's simulate options (lines above); cannot pin the shipped germline set" >&2; exit 2; }
         partis simulate --simulate-from-scratch --force-dont-generate-germline-set --n-sim-events ${params.n_founders} \\
-            --n-leaves ${params.mean_family_size} --mutation-multiplier ${mult} --seed ${params.seed} \\
+            --n-leaves ${params.mean_family_size} --mutation-multiplier ${mult} --seed ${params.seed} ${shared_args} \\
             --n-procs 1 --outfname simu_${level}.yaml --airr-output
         if [ ! -s simu_${level}.tsv ]; then
             help_rc=0; parse-output.py --help > parse_output_help_${level}.txt 2>&1 || help_rc=\$?

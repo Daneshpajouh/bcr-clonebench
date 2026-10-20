@@ -12,7 +12,7 @@ import argparse
 import json
 import sys
 
-LEVEL_ORDER = {"low": 0, "medium": 1, "high": 2}
+LEVEL_ORDER = {"low": 0, "medium": 1, "high": 2, "low_shared": 3, "medium_shared": 4, "high_shared": 5}
 COLUMNS = ("level", "error_rate", "method", "n_truth", "n_dropped", "n_not_annotated", "n_not_productive",
            "n_dropped_later", "pair_precision", "predicted_pairs", "pair_recall", "pair_f1", "ari", "n_truth_productive",
            "pair_f1_productive", "ari_productive", "v_gene_exact",

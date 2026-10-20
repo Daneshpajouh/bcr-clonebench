@@ -30,7 +30,12 @@ def requireDigest(name, image) {
 
 workflow {
     requireDigest('suite_image', params.suite_image)
-    levels = Channel.fromList(params.levels)
+    def all_levels = params.levels + (params.shared_vj ? params.levels.collect { "${it}_shared" } : [])
+    levels = Channel.fromList(all_levels)
+    if (params.shared_vj && params.lineage_simulator != 'partis')
+        error "params.shared_vj needs lineage_simulator partis (the in-repo generator cannot share V, J and junction length)"
+    if (params.shared_vj && params.lineage_mode == 'bcr-phylo')
+        error "params.shared_vj needs lineage_mode partis (bcr-phylo-run.py takes its options in params.bcr_phylo_args)"
     if (params.lineage_simulator == 'partis') {
         // the clonal truth comes from partis (Director ruling 2026-10-19 19:52)
         requireDigest('partis_image', params.partis_image)

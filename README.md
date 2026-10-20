@@ -12,13 +12,15 @@ It is a benchmark harness, not a new grouping method.
 
 ## How it works
 
-1. **Simulate clonal families.** partis simulates human IGH clonal families from scratch at three hypermutation levels (low, medium, high), and writes the true family, genes and mutation state of every read.
+1. **Simulate clonal families.** partis simulates human IGH clonal families from scratch at three hypermutation levels (low, medium, high), and writes the true family, genes and mutation state of every read. With `--shared_vj true` each level also runs in a harder setting, `<level>_shared`, where every family uses the same V allele, the same J allele and the same junction length (partis `--only-genes` and `--allowed-cdr3-lengths`, defaults `IGHV3-23*01:IGHJ4*02` and 48 nucleotides), so unrelated families look alike and a method can wrongly merge them.
 2. **Add sequencing errors.** Each level is copied at each sequencing-error rate (0, 0.1 and 0.5 percent per base by default). The errors are kept out of the truth: they are noise the pipeline has to see through.
 3. **Annotate.** IgBLAST assigns V, D and J genes against the OGRDB human IGH germline set, and Change-O writes an AIRR table.
 4. **Pick a clustering threshold.** SHazaM estimates the distance threshold from the data. If it finds none, a fixed fallback is used and the run says so.
-5. **Group into clones** with four methods: Change-O DefineClones at the SHazaM threshold, and SCOPer identical, hierarchical and spectral.
+5. **Group into clones** with four methods: Change-O DefineClones at the SHazaM threshold, and SCOPer identical, hierarchical and spectral. DefineClones and SCOPer hierarchical are one method in two implementations: single-linkage clustering of junctions by length-normalized Hamming distance at the same threshold (DefineClones' `--link` defaults to single in the pinned suite image, as its own `--help` says; the SCOPer call sets `linkage = "single"`). Their agreement is a check on the pipeline, not a second result.
 6. **Estimate hypermutation** per read with SHazaM.
 7. **Score** every method against the known answers (`bin/score_clones.py`), then collect one table over all levels, error rates and methods.
+
+Each run keeps the `--help` text of DefineClones and of partis in `results/tool-help/`, read from the images it used, so every option named here can be checked against the installed version.
 
 Every tool runs in a container named by digest in `images.lock`. The pipeline refuses to start with an image that is not pinned. partis draws each family's tree with the R package TreeSim, which the published partis image lacks, so the lineage step runs in a small image built on the pinned partis digest that adds R 4.5.3 and TreeSim 2.4 from conda-forge, fixed by build string (`containers/partis-r`). CI rebuilds that small image on every run, so its own digest differs from run to run; the pinned part is the base partis digest in `images.lock` it is built on, and the R and TreeSim builds it adds.
 
