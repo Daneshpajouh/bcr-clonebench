@@ -30,6 +30,7 @@ process ANNOTATE {
     """
     awk 'BEGIN{OFS="\\t"; print "sequence_id","sequence","v_call","j_call","junction","productive"}
          /^>/{id=substr(\$0,2); next} {print id,\$0,"IGHV1-2*02","IGHJ4*02","TGTGCGAGAGGG","T"}' ${reads} > db_${level}.tsv
-    printf 'sequence_id\treason\n' > drops_${level}.tsv
+    # The drops header with no rows: no read dropped, a real case score_clones accepts.
+    printf 'sequence_id\\treason\\n' > drops_${level}.tsv
     """
 }

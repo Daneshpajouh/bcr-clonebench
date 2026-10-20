@@ -122,6 +122,43 @@ class Cli(unittest.TestCase):
         dup = self.tsv("d.tsv", [sc.TRUTH_COLUMNS, ("s1", "A", "v", "j", "0"), ("s1", "A", "v", "j", "0")])
         self.assertEqual(sc.main(["--truth", dup, "--pred", pred, "--out-json", out]), 2)
 
+    def test_drops_header_without_rows_is_zero_drops(self):
+        # CI run 16: a drops table with a header and no rows (no read dropped) was refused as 'no rows'.
+        truth = self.tsv("t.tsv", [sc.TRUTH_COLUMNS, ("s1", "A", "IGHV1-2*02", "IGHJ4*02", "0.1"),
+                                   ("s2", "A", "IGHV1-2*02", "IGHJ4*02", "0.1")])
+        pred = self.tsv("p.tsv", [("sequence_id", "clone_id", "v_call", "j_call"),
+                                  ("s1", "1", "IGHV1-2*02", "IGHJ4*02"), ("s2", "1", "IGHV1-2*02", "IGHJ4*02")])
+        drops = self.tsv("drops.tsv", [("sequence_id", "reason")])
+        out = os.path.join(self.d.name, "o.json")
+        self.assertEqual(sc.main(["--truth", truth, "--pred", pred, "--drops", drops, "--out-json", out]), 0)
+        with open(out) as f:
+            r = json.load(f)
+        self.assertEqual((r["n_dropped"], r["dropped_by_reason"]), (0, {}))
+
+    def test_drops_header_without_rows_still_names_reads_dropped_later(self):
+        truth = self.tsv("t.tsv", [sc.TRUTH_COLUMNS, ("s1", "A", "v", "j", "0"), ("s2", "A", "v", "j", "0")])
+        pred = self.tsv("p.tsv", [("sequence_id", "clone_id", "v_call", "j_call"), ("s1", "1", "v", "j")])
+        drops = self.tsv("drops.tsv", [("sequence_id", "reason")])
+        out = os.path.join(self.d.name, "o.json")
+        self.assertEqual(sc.main(["--truth", truth, "--pred", pred, "--drops", drops, "--out-json", out]), 0)
+        with open(out) as f:
+            self.assertEqual(json.load(f)["dropped_by_reason"], {"dropped_later": 1})
+
+    def test_drops_file_without_header_is_refused(self):
+        truth = self.tsv("t.tsv", [sc.TRUTH_COLUMNS, ("s1", "A", "v", "j", "0")])
+        pred = self.tsv("p.tsv", [("sequence_id", "clone_id", "v_call", "j_call"), ("s1", "1", "v", "j")])
+        empty = os.path.join(self.d.name, "empty.tsv")
+        open(empty, "w").close()
+        out = os.path.join(self.d.name, "o.json")
+        self.assertEqual(sc.main(["--truth", truth, "--pred", pred, "--drops", empty, "--out-json", out]), 2)
+        with self.assertRaisesRegex(ValueError, "no header"):
+            sc.read_tsv(empty, ("sequence_id", "reason"), allow_empty=True)
+
+    def test_truth_and_prediction_with_a_header_and_no_rows_are_still_refused(self):
+        head_only = self.tsv("h.tsv", [sc.TRUTH_COLUMNS])
+        with self.assertRaisesRegex(ValueError, "no rows"):
+            sc.read_tsv(head_only, sc.TRUTH_COLUMNS)
+
 
 if __name__ == "__main__":
     unittest.main()

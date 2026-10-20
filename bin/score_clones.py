@@ -34,15 +34,21 @@ TRUTH_COLUMNS = ("sequence_id", "true_clone_id", "true_v_call", "true_j_call", "
 PRED_COLUMNS = ("sequence_id", "clone_id", "v_call", "j_call")
 
 
-def read_tsv(path, required):
+def read_tsv(path, required, allow_empty=False):
+    """Rows of a tab-separated table with a header. A table with no header
+    is always refused; a header with no rows only when allow_empty is
+    false (a drops table with no rows is real: no read was dropped)."""
     with open(path, newline="", encoding="utf-8") as f:
-        rows = list(csv.DictReader(f, delimiter="\t"))
-        header = rows[0].keys() if rows else []
+        reader = csv.DictReader(f, delimiter="\t")
+        header = reader.fieldnames or []
+        rows = list(reader)
+    if not header:
+        raise ValueError(f"{path}: no header")
     missing = [c for c in required if c not in header]
-    if not rows:
-        raise ValueError(f"{path}: no rows")
     if missing:
         raise ValueError(f"{path}: missing column(s) {', '.join(missing)}")
+    if not rows and not allow_empty:
+        raise ValueError(f"{path}: no rows")
     ids = [r["sequence_id"] for r in rows]
     if len(set(ids)) != len(ids):
         raise ValueError(f"{path}: repeated sequence_id")
@@ -169,7 +175,8 @@ def main(argv=None):
     ap.add_argument("--out-json", required=True)
     a = ap.parse_args(argv)
     try:
-        drops = ({r["sequence_id"]: r["reason"] for r in read_tsv(a.drops, ("sequence_id", "reason"))}
+        drops = ({r["sequence_id"]: r["reason"]
+                  for r in read_tsv(a.drops, ("sequence_id", "reason"), allow_empty=True)}
                  if a.drops else None)
         res = score(read_tsv(a.truth, TRUTH_COLUMNS),
                     read_tsv(a.pred, PRED_COLUMNS + ((a.mu_column,) if a.mu_column else ())), a.mu_column, drops)
