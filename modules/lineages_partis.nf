@@ -21,7 +21,10 @@
 // line 472 turns generate_germline_set on whenever rearrange_from_scratch is
 // set unless that switch is given (CI run 11 evidence). The script stops at
 // once if the installed partis lacks it, after printing the help lines and
-// partis source lines that name the germline set. matplotlib
+// partis source lines that name the germline set. It runs in one process
+// (--n-procs 1): with several, partis merged only the .yaml and left the AIRR
+// .tsv in its sub-process folders (CI run 12), so the step lists the task
+// folder and stops at once if simu_<level>.tsv is missing. matplotlib
 // writes its cache in the task folder (MPLCONFIGDIR).
 process LINEAGES_PARTIS {
     container params.partis_image
@@ -68,7 +71,9 @@ process LINEAGES_PARTIS {
         { grep -q -- '--force-dont-generate-germline-set' partis_help_${level}.txt || grep -qF "subargs['simulate'].append({'name' : '--force-dont-generate-germline-set'" /partis/bin/partis; } || { echo "partis in ${params.partis_image} has no --force-dont-generate-germline-set in partis_help_${level}.txt or in bin/partis's simulate options (lines above); cannot pin the shipped germline set" >&2; exit 2; }
         partis simulate --simulate-from-scratch --force-dont-generate-germline-set --n-sim-events ${params.n_founders} \\
             --n-leaves ${params.mean_family_size} --mutation-multiplier ${mult} --seed ${params.seed} \\
-            --outfname simu_${level}.yaml --airr-output
+            --n-procs 1 --outfname simu_${level}.yaml --airr-output
+        ls -la >&2
+        test -s simu_${level}.tsv || { echo "partis simulate wrote no simu_${level}.tsv (AIRR) in the task folder (listing above)" >&2; exit 1; }
         python3 ${airr_truth_py} --airr simu_${level}.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
         """
 

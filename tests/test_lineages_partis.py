@@ -104,6 +104,16 @@ class LineagesPartisScript(unittest.TestCase):
         self.assertIn("subargs['simulate'].append({'name' : '--force-dont-generate-germline-set'", ls[guard])
         self.assertIn("grep -qF", ls[guard])
 
+    def test_one_process_and_the_airr_table_checked_before_airr_truth(self):
+        # CI run 12: with several processes partis merged only the .yaml; the AIRR .tsv stayed in sub-process folders.
+        ls = lines(script_blocks()[1])
+        sim = next(i for i, ln in enumerate(ls) if ln.startswith("partis simulate --simulate-from-scratch"))
+        self.assertIn("--n-procs 1", " ".join(ls[sim:sim + 3]))
+        truth = next(i for i, ln in enumerate(ls) if "${airr_truth_py}" in ln)
+        self.assertEqual(ls[truth - 2], "ls -la >&2")
+        self.assertTrue(ls[truth - 1].startswith("test -s simu_${level}.tsv ||"))
+        self.assertIn("exit 1", ls[truth - 1])
+
 
 class Workflow(unittest.TestCase):
     def test_failed_task_logs_are_uploaded_and_results_always(self):
