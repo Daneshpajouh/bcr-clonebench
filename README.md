@@ -63,7 +63,7 @@ The subset is fixed by rule before any file is read (`bin/oas_subset.py`): the f
 |---|---|---|
 | `make test` | Python 3 | Unit tests, standard library only |
 | `make stub` | Nextflow, Java | Runs the pipeline wiring with no tools |
-| `make pin` | Docker | Pulls and builds the images and writes their digests to `images.lock` |
+| `make pin` | Docker | Pulls and builds the images and writes their digests to `images.lock`; stops, writing nothing, if a locked image's tag now points at another digest |
 | `make reference` | Docker | Builds the OGRDB human IGH germline reference in the suite image |
 | `make known-answer` | Docker, Nextflow | The whole known-answer test on the small test profile |
 

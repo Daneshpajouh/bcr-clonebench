@@ -1,5 +1,7 @@
 # Container images by digest. 'make pin' writes the digests after a pull on
-# a machine with Docker; the pipeline refuses to run without them.
-suite_image	immcantation/suite:4.5.0	digest-not-yet-pinned
+# a machine with Docker; the pipeline refuses to run without them. A pulled
+# image that already has a digest here is locked: if its tag now resolves to
+# another digest, 'make pin' stops and writes nothing.
+suite_image	immcantation/suite:4.5.0	immcantation/suite@sha256:ec1281cdbf239f5d4b6dbb7c6527169e69a919fe34567bb20bfee96b4bddcc7c
 immunesim_image	containers/immunesim (built from containers/immunesim/Dockerfile)	digest-not-yet-pinned
-partis_image	psathyrella/partis:latest	digest-not-yet-pinned
+partis_image	quay.io/matsengrp/partis:latest	quay.io/matsengrp/partis@sha256:4fad317c02debd098bcf71a1a85c8d29fd5a1ab8fe92d5da556d49b85e8eed31

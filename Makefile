@@ -2,7 +2,7 @@
 # Nextflow; the other targets need Docker.
 SUITE_TAG ?= immcantation/suite:4.5.0
 IMMUNESIM_TAG ?= bcr-clonebench/immunesim:local
-PARTIS_TAG ?= psathyrella/partis:latest
+PARTIS_TAG ?= quay.io/matsengrp/partis:latest
 SUITE = $(shell awk -F'\t' '$$1=="suite_image"{print $$3}' images.lock)
 IMMUNESIM = $(shell awk -F'\t' '$$1=="immunesim_image"{print $$3}' images.lock)
 PARTIS = $(shell awk -F'\t' '$$1=="partis_image"{print $$3}' images.lock)
@@ -17,6 +17,7 @@ stub:
 	nextflow run main.nf -stub -profile test
 
 # Pull and build the images, then write their digests into images.lock.
+# A pulled image already locked by digest must still resolve to it, or this stops.
 pin:
 	docker pull $(SUITE_TAG)
 	docker pull $(PARTIS_TAG)

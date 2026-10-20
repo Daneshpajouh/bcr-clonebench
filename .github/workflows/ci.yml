@@ -42,7 +42,7 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: nf-core/setup-nextflow@v2
-      - name: Build the immuneSIM image and pin both images
+      - name: Build the immuneSIM image and check the locked digests (stops if a tag moved)
         run: make pin
       - name: Known-answer run
         run: make known-answer
