@@ -58,6 +58,6 @@ workflow {
     clones = CLONES(thresholds.combine(methods), file("${projectDir}/bin/clones_scoper.R")).clones   // [level, method, clones]
     mutated = MUTATION(clones, file(params.reference_dir), file("${projectDir}/bin/mutation.R"))  // [level, method, clones with mu_freq]
     truths = noisy.map { label, reads, truth -> [label, truth] }
-    scores = SCORE(mutated.combine(truths, by: 0).combine(annotated.drops, by: 0))   // json per level and method
-    SUMMARY(scores.collect())
+    scores = SCORE(mutated.combine(truths, by: 0).combine(annotated.drops, by: 0))   // json and per-read table per level and method
+    SUMMARY(scores.json.collect())
 }

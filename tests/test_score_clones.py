@@ -215,3 +215,71 @@ class ProductiveView(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PerRead(unittest.TestCase):
+    # CI run 17 review, item (4): one row per truth read, with its true and called V and J, whether the
+    # call set includes the true gene, and whether the read was kept or why it was dropped. Values by hand.
+    def setUp(self):
+        cols = sc.TRUTH_COLUMNS + ("true_productive",)
+        self.truth = [dict(zip(cols, r)) for r in (
+            ("s1", "A", "IGHV1-2*02", "IGHJ4*02", "0.04", "T"),
+            ("s2", "A", "IGHV1-2*02", "IGHJ4*02", "0.04", "T"),
+            ("s3", "B", "IGHV3-23*01", "IGHJ6*02", "0.04", "F"),
+            ("s4", "B", "IGHV3-23*01", "IGHJ6*02", "0.04", "T"))]
+        # s1 exact; s2 tie that includes the true V; s3 dropped at annotation; s4 dropped later (not in drops)
+        self.pred = [pred_row(1, "c1"), pred_row(2, "c1", v="IGHV1-2*04,IGHV1-69*01")]
+        self.drops = {"s3": "not_productive"}
+
+    def test_one_row_per_truth_read_in_truth_order(self):
+        rows = sc.per_read(self.truth, self.pred, self.drops, "low", "changeo")
+        self.assertEqual([r["sequence_id"] for r in rows], ["s1", "s2", "s3", "s4"])
+        self.assertEqual({(r["level"], r["method"]) for r in rows}, {("low", "changeo")})
+        s1, s2, s3, s4 = rows
+        self.assertEqual((s1["status"], s1["drop_reason"], s1["v_exact"], s1["v_includes_true"]), ("kept", "", 1, 1))
+        self.assertEqual((s2["v_call"], s2["v_exact"], s2["v_includes_true"], s2["j_exact"]),
+                         ("IGHV1-2*04,IGHV1-69*01", 0, 1, 1))
+        self.assertEqual((s3["status"], s3["drop_reason"], s3["true_productive"]), ("dropped", "not_productive", "F"))
+        self.assertEqual((s3["v_call"], s3["v_exact"], s3["v_includes_true"], s3["clone_id"]), ("", 0, 0, ""))
+        self.assertEqual((s4["status"], s4["drop_reason"]), ("dropped", "dropped_later"))
+
+    def test_rows_add_up_to_the_summary_scores(self):
+        rows = sc.per_read(self.truth, self.pred, self.drops, "low", "changeo")
+        r = sc.score(self.truth, self.pred, drops=self.drops)
+        n = len(rows)
+        for g in ("v", "j"):
+            self.assertEqual(sum(x[f"{g}_exact"] for x in rows) / n, r[f"{g}_gene"]["exact"])
+            self.assertEqual(sum(x[f"{g}_includes_true"] for x in rows) / n, r[f"{g}_gene"]["includes_true"])
+        reasons = {}
+        for x in rows:
+            if x["status"] == "dropped":
+                reasons[x["drop_reason"]] = reasons.get(x["drop_reason"], 0) + 1
+        self.assertEqual(reasons, r["dropped_by_reason"])
+
+    def test_without_a_drops_table_a_dropped_read_says_dropped(self):
+        rows = sc.per_read(self.truth, self.pred, None, "low", "changeo")
+        self.assertEqual([x["drop_reason"] for x in rows], ["", "", "dropped", "dropped"])
+
+    def test_cli_writes_the_table_and_splits_the_label(self):
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+
+        def tsv(name, header, rows):
+            p = os.path.join(d.name, name)
+            with open(p, "w") as f:
+                f.write("\t".join(header) + "\n")
+                for x in rows:
+                    f.write("\t".join(x[c] for c in header) + "\n")
+            return p
+        truth = tsv("t.tsv", sc.TRUTH_COLUMNS + ("true_productive",), self.truth)
+        pred = tsv("p.tsv", PRED_COLUMNS, self.pred)
+        drops = tsv("d.tsv", ("sequence_id", "reason"), [{"sequence_id": "s3", "reason": "not_productive"}])
+        out, reads = os.path.join(d.name, "o.json"), os.path.join(d.name, "reads.tsv")
+        self.assertEqual(sc.main(["--truth", truth, "--pred", pred, "--drops", drops, "--label", "high/spectral",
+                                  "--out-json", out, "--out-reads", reads]), 0)
+        with open(reads) as f:
+            lines = f.read().splitlines()
+        self.assertEqual(lines[0].split("\t"), list(sc.READ_COLUMNS))
+        self.assertEqual(len(lines), 5)
+        first = dict(zip(sc.READ_COLUMNS, lines[1].split("\t")))
+        self.assertEqual((first["level"], first["method"], first["v_exact"]), ("high", "spectral", "1"))

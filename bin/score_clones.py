@@ -25,6 +25,12 @@ With --drops (the annotation step's drops table: sequence_id, reason),
 n_dropped is split by reason; a truth read dropped after annotation, or
 not named in the table, counts as dropped_later.
 
+With --out-reads, one row per truth read is written as well (READ_COLUMNS):
+its true and called clone, V and J, whether each call is exact and whether
+the call set includes the true gene, and whether the read was kept or why
+it was dropped. The rows add up to the summary scores. A --label of the
+form level/method fills the level and method columns.
+
 Standard library only, so CI needs nothing installed.
 """
 
@@ -36,6 +42,9 @@ import sys
 
 TRUTH_COLUMNS = ("sequence_id", "true_clone_id", "true_v_call", "true_j_call", "true_mu_freq")
 PRED_COLUMNS = ("sequence_id", "clone_id", "v_call", "j_call")
+READ_COLUMNS = ("sequence_id", "level", "method", "true_productive", "true_clone_id", "clone_id",
+                "true_v_call", "v_call", "v_exact", "v_includes_true",
+                "true_j_call", "j_call", "j_exact", "j_includes_true", "status", "drop_reason")
 
 
 def read_tsv(path, required, allow_empty=False):
@@ -92,14 +101,21 @@ def gene(allele):
     return allele.split("*", 1)[0].strip()
 
 
+def call_match(truth_call, pred_call):
+    """(exact, includes_true) for one read, each 0 or 1: the call is exactly
+    the true gene (one gene named); the call set includes it (ties allowed)."""
+    genes = {gene(x) for x in (pred_call or "").split(",") if x.strip()}
+    return int(genes == {gene(truth_call)}), int(gene(truth_call) in genes)
+
+
 def call_scores(truth_calls, pred_calls):
     """Share of sequences whose call is exactly the true gene (one gene
     named), and share whose call set includes it (ties allowed)."""
     exact = anyof = 0
     for t, p in zip(truth_calls, pred_calls):
-        genes = {gene(x) for x in (p or "").split(",") if x.strip()}
-        exact += genes == {gene(t)}
-        anyof += gene(t) in genes
+        e, a = call_match(t, p)
+        exact += e
+        anyof += a
     n = len(truth_calls)
     return {"exact": exact / n, "includes_true": anyof / n}
 
@@ -188,6 +204,38 @@ def productive_view(truth, pred, mu_column=None, drops=None):
     return view
 
 
+def per_read(truth, pred, drops, level="", method=""):
+    """One row per truth read, in truth order (READ_COLUMNS). A read is kept
+    when the pipeline gave it a clone, as in score(); a dropped read has
+    empty calls, so its matches are 0, and its reason comes from the drops
+    table (dropped_later when not named there, 'dropped' with no table)."""
+    by_id = {r["sequence_id"]: r for r in pred}
+    rows = []
+    for r in truth:
+        sid = r["sequence_id"]
+        p = by_id.get(sid)
+        kept = p is not None and bool(p.get("clone_id"))
+        v = p["v_call"] if kept else ""
+        j = p["j_call"] if kept else ""
+        ve, vi = call_match(r["true_v_call"], v)
+        je, ji = call_match(r["true_j_call"], j)
+        reason = "" if kept else ("dropped" if drops is None else drops.get(sid, "dropped_later"))
+        rows.append({"sequence_id": sid, "level": level, "method": method,
+                     "true_productive": (r.get("true_productive") or "").strip(),
+                     "true_clone_id": r["true_clone_id"], "clone_id": p["clone_id"] if kept else "",
+                     "true_v_call": r["true_v_call"], "v_call": v, "v_exact": ve, "v_includes_true": vi,
+                     "true_j_call": r["true_j_call"], "j_call": j, "j_exact": je, "j_includes_true": ji,
+                     "status": "kept" if kept else "dropped", "drop_reason": reason})
+    return rows
+
+
+def write_reads(path, rows):
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=READ_COLUMNS, delimiter="\t", lineterminator="\n")
+        w.writeheader()
+        w.writerows(rows)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--truth", required=True)
@@ -196,6 +244,7 @@ def main(argv=None):
     ap.add_argument("--label", default="", help="written into the output, e.g. the mutation level")
     ap.add_argument("--drops", help="the annotation step's drops table (sequence_id, reason)")
     ap.add_argument("--out-json", required=True)
+    ap.add_argument("--out-reads", help="also write one row per truth read here (tab-separated)")
     a = ap.parse_args(argv)
     try:
         drops = ({r["sequence_id"]: r["reason"]
@@ -205,6 +254,9 @@ def main(argv=None):
         pred = read_tsv(a.pred, PRED_COLUMNS + ((a.mu_column,) if a.mu_column else ()))
         res = score(truth, pred, a.mu_column, drops)
         res["productive_truth"] = productive_view(truth, pred, a.mu_column, drops)
+        if a.out_reads:
+            level, _, method = a.label.partition("/")
+            write_reads(a.out_reads, per_read(truth, pred, drops, level, method))
     except (OSError, ValueError) as e:
         print(f"score_clones: {e}", file=sys.stderr)
         return 2

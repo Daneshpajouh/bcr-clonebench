@@ -34,6 +34,8 @@ Every tool runs in a container named by digest in `images.lock`. The pipeline re
 
 A read the pipeline drops (failed QC or annotation) still counts: as its own one-read clone and as a wrong V and J call. Dropping hard reads therefore cannot raise a score. The same metrics on the retained reads only are reported beside them.
 
+Beside the summary table, `results/reads/` holds one table per level, error rate and method with a row per simulated read: its true and called clone, V and J, whether each call names exactly the true gene and whether the call set includes it, and whether the read was kept or, if dropped, why. The rows add up to the summary scores, so any figure in the table can be traced to the reads behind it.
+
 The headline scores cover every simulated read. Where the simulator marks each read productive or not (partis does), the same clone and gene scores are also reported over the productive reads alone (n_truth_productive, pair_f1_productive, ari_productive). A productive read the pipeline drops still counts as its own clone there too.
 
 ## Two independent generators
