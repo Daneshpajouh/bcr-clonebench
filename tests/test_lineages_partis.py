@@ -65,6 +65,30 @@ class LineagesPartisScript(unittest.TestCase):
             self.assertIn("|| rc=\\$?", ln)
             self.assertRegex(ls[helps[0] + 1], r"test \\\$rc -eq 0 \|\| echo .*>&2$")
 
+    def test_partis_uses_its_shipped_germline_set(self):
+        # CI run 9: rearranging from scratch made partis generate a germline set whose
+        # alleles rarely gave productive rearrangements; one sub-process kept retrying.
+        block = script_blocks()[1]
+        ls = lines(block)
+        sims = [i for i, ln in enumerate(ls) if ln.startswith("partis simulate --simulate-from-scratch")]
+        self.assertEqual(len(sims), 1)
+        self.assertIn("--dont-generate-germline-set", ls[sims[0]])
+        checks = [i for i, ln in enumerate(ls) if "grep -q -- '--dont-generate-germline-set'" in ln]
+        self.assertEqual(len(checks), 1)
+        self.assertLess(checks[0], sims[0])
+        self.assertIn("partis_help_${level}.txt", ls[checks[0]])
+        self.assertRegex(ls[checks[0]], r"exit [1-9]\d*; }$")
+        self.assertIn(">&2", ls[checks[0]])
+
+    def test_matplotlib_cache_in_the_task_folder_before_the_tool_runs(self):
+        for block in script_blocks():
+            ls = lines(block)
+            mpl = [i for i, ln in enumerate(ls) if ln.startswith("export MPLCONFIGDIR=")]
+            self.assertEqual(len(mpl), 1)
+            self.assertIn("\\$PWD/", ls[mpl[0]])
+            first_tool = next(i for i, ln in enumerate(ls) if "--help >" in ln)
+            self.assertLess(mpl[0], first_tool)
+
 
 if __name__ == "__main__":
     unittest.main()

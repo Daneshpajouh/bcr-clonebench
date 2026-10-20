@@ -13,6 +13,11 @@
 // the task folder as an input and run with python3 (CI run 8: the project's
 // bin folder was not reachable inside the partis-r container), and each
 // script lists the task folder so the run log shows what was staged.
+// partis rearranges from the human IGH germline set it ships, not from a set
+// it generates (CI run 9: a generated 55-allele set had alleles that rarely
+// give productive rearrangements, and one sub-process kept retrying); the
+// script stops at once if the installed partis lacks the option. matplotlib
+// writes its cache in the task folder (MPLCONFIGDIR).
 process LINEAGES_PARTIS {
     container params.partis_image
     tag "${level}"
@@ -33,6 +38,7 @@ process LINEAGES_PARTIS {
         echo "PATH=\$PATH" >&2
         ls -la >&2
         test -x /partis/bin/bcr-phylo-run.py || { echo "bcr-phylo-run.py not found at /partis/bin/bcr-phylo-run.py in ${params.partis_image}" >&2; exit 127; }
+        export MPLCONFIGDIR=\$PWD/mplconfig; mkdir -p \$MPLCONFIGDIR
         rc=0; bcr-phylo-run.py --help > partis_help_${level}.txt 2>&1 || rc=\$?
         test \$rc -eq 0 || echo "bcr-phylo-run.py --help exited \$rc; help text kept in partis_help_${level}.txt" >&2
         bcr-phylo-run.py --base-outdir bp_${level} --seed ${params.seed} ${params.bcr_phylo_args}
@@ -47,9 +53,11 @@ process LINEAGES_PARTIS {
         ls -la >&2
         test -x /partis/bin/partis || { echo "partis not found at /partis/bin/partis in ${params.partis_image}" >&2; exit 127; }
         command -v R > /dev/null || { echo "R not found on PATH in ${params.partis_image}: partis needs R and TreeSim to draw trees; use the partis-r image (images.lock partis_r_image)" >&2; exit 127; }
+        export MPLCONFIGDIR=\$PWD/mplconfig; mkdir -p \$MPLCONFIGDIR
         rc=0; partis simulate --help > partis_help_${level}.txt 2>&1 || rc=\$?
         test \$rc -eq 0 || echo "partis simulate --help exited \$rc; help text kept in partis_help_${level}.txt" >&2
-        partis simulate --simulate-from-scratch --n-sim-events ${params.n_founders} \\
+        grep -q -- '--dont-generate-germline-set' partis_help_${level}.txt || { echo "partis simulate in ${params.partis_image} has no --dont-generate-germline-set (see partis_help_${level}.txt); cannot pin the shipped germline set" >&2; exit 2; }
+        partis simulate --simulate-from-scratch --dont-generate-germline-set --n-sim-events ${params.n_founders} \\
             --n-leaves ${params.mean_family_size} --mutation-multiplier ${mult} --seed ${params.seed} \\
             --outfname simu_${level}.yaml --airr-output
         python3 ${airr_truth_py} --airr simu_${level}.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
