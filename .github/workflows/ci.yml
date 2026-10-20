@@ -55,6 +55,21 @@ jobs:
       - name: Known-answer run
         run: make known-answer
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: results
           path: results/
+      # CI run 10: a failed task left nothing to read; keep each task's script, logs and partis help text.
+      - name: Keep the task folders' scripts and logs when a step failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-task-logs
+          path: |
+            work/**/.command.sh
+            work/**/.command.err
+            work/**/.command.out
+            work/**/.command.log
+            work/**/partis_help_*.txt
+          if-no-files-found: warn
+          retention-days: 7

@@ -89,6 +89,32 @@ class LineagesPartisScript(unittest.TestCase):
             first_tool = next(i for i, ln in enumerate(ls) if "--help >" in ln)
             self.assertLess(mpl[0], first_tool)
 
+    def test_option_evidence_is_printed_before_the_guard(self):
+        # CI run 10: the guard stopped the run and nothing showed why; print the help lines and
+        # the partis source lines that name the option first, and accept the option from either.
+        ls = lines(script_blocks()[1])
+        guard = next(i for i, ln in enumerate(ls) if "grep -q -- '--dont-generate-germline-set'" in ln)
+        before = "\n".join(ls[:guard])
+        self.assertIn("grep -n -i germline partis_help_${level}.txt >&2", before)
+        self.assertIn("head -n 40 partis_help_${level}.txt >&2", before)
+        self.assertIn("/partis/bin/partis /partis/python", before)
+        self.assertIn('if [ -n "\\$src" ]', before)       # '(none)' printed when the source has no match
+        # from the source, only a defined option counts, not any mention of the words
+        self.assertIn("add_argument", ls[guard])
+        self.assertIn("--dont-generate-germline-set", ls[guard])
+
+
+class Workflow(unittest.TestCase):
+    def test_failed_task_logs_are_uploaded_and_results_always(self):
+        with open(os.path.join(os.path.dirname(MODULE), "..", ".github", "workflows", "ci.yml"), encoding="utf-8") as f:
+            ci = f.read()
+        step = ci.split("name: Keep the task folders' scripts and logs when a step failed", 1)[1]
+        self.assertIn("if: failure()", step.split("- ", 1)[0] + step[:400])
+        for pattern in ("work/**/.command.err", "work/**/.command.sh", "work/**/partis_help_*.txt"):
+            self.assertIn(pattern, step)
+        results = ci.split("name: results", 1)[0].rsplit("- uses: actions/upload-artifact@v4", 1)[1]
+        self.assertIn("if: always()", results)
+
 
 if __name__ == "__main__":
     unittest.main()
