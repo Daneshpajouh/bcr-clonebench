@@ -35,6 +35,7 @@ process LINEAGES_PARTIS {
         """
         export PATH=/partis/bin:/opt/conda/bin:\$PATH
         test -x /partis/bin/partis || { echo "partis not found at /partis/bin/partis in ${params.partis_image}" >&2; exit 127; }
+        command -v R > /dev/null || { echo "R not found on PATH in ${params.partis_image}: partis needs R and TreeSim to draw trees; use the partis-r image (images.lock partis_r_image)" >&2; exit 127; }
         rc=0; partis simulate --help > partis_help_${level}.txt 2>&1 || rc=\$?
         test \$rc -eq 0 || echo "partis simulate --help exited \$rc; help text kept in partis_help_${level}.txt" >&2
         partis simulate --simulate-from-scratch --n-sim-events ${params.n_founders} \\

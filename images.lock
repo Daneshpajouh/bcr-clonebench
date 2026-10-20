@@ -5,3 +5,4 @@
 suite_image	immcantation/suite:4.5.0	immcantation/suite@sha256:ec1281cdbf239f5d4b6dbb7c6527169e69a919fe34567bb20bfee96b4bddcc7c
 immunesim_image	containers/immunesim (built from containers/immunesim/Dockerfile)	digest-not-yet-pinned
 partis_image	quay.io/matsengrp/partis:latest	quay.io/matsengrp/partis@sha256:4fad317c02debd098bcf71a1a85c8d29fd5a1ab8fe92d5da556d49b85e8eed31
+partis_r_image	containers/partis-r (built FROM partis_image by digest, adds R and TreeSim)	digest-not-yet-pinned
