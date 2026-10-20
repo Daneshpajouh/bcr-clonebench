@@ -9,8 +9,9 @@
 #
 # OUT_DIR gets germlines/IGH{V,D,J}.fasta (V with IMGT gaps, as MakeDb and
 # CreateGermlines need) and igblast/, a copy of the suite's IgBLAST data
-# folder whose human IG databases are rebuilt from those files, so
-# AssignGenes finds them under the names it expects.
+# folder whose human IG databases are rebuilt from those files (headers cut
+# to the allele name by igblast_fasta.py), so AssignGenes finds them under
+# the names it expects.
 set -euo pipefail
 SUITE_IGDATA=/usr/local/share/igblast
 SUITE_GERM=/usr/local/share/germlines/imgt/human/vdj
@@ -31,9 +32,12 @@ case "$kind" in
   *) echo "unknown reference kind: $kind" >&2; exit 2 ;;
 esac
 cp -r "$SUITE_IGDATA" "$out/igblast"
+here=$(dirname "$0")
 for seg in v d j; do
   up=$(echo "$seg" | tr vdj VDJ)
-  tr -d '.' < "$out/germlines/IGH$up.fasta" > "$out/igblast/fasta_ungapped_$seg.fasta"
+  # headers cut to the allele name (makeblastdb ids are 50 characters at most)
+  python3 "$here/igblast_fasta.py" "$out/germlines/IGH$up.fasta" "$out/igblast/fasta_ungapped_$seg.fasta"
+  python3 "$here/igblast_fasta.py" --check "$out/igblast/fasta_ungapped_$seg.fasta"
   makeblastdb -parse_seqids -dbtype nucl -in "$out/igblast/fasta_ungapped_$seg.fasta" \
     -out "$out/igblast/database/imgt_human_ig_$seg" > /dev/null
 done
