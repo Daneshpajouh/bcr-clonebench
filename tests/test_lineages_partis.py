@@ -58,7 +58,7 @@ class LineagesPartisScript(unittest.TestCase):
         # not pass silently either: its exit code is kept and reported.
         for block in script_blocks():
             ls = lines(block)
-            helps = [i for i, ln in enumerate(ls) if "--help >" in ln]
+            helps = [i for i, ln in enumerate(ls) if "--help > partis_help_" in ln]   # parse-output's help is separate
             self.assertEqual(len(helps), 1)
             ln = ls[helps[0]]
             self.assertNotIn("|| true", ln)
@@ -113,6 +113,23 @@ class LineagesPartisScript(unittest.TestCase):
         self.assertEqual(ls[truth - 2], "ls -la >&2")
         self.assertTrue(ls[truth - 1].startswith("test -s simu_${level}.tsv ||"))
         self.assertIn("exit 1", ls[truth - 1])
+
+    def test_a_missing_airr_table_is_converted_from_the_yaml_with_partis_parse_output(self):
+        # CI run 13: this partis writes only simu_<level>.yaml from simulate, whatever the process count.
+        ls = lines(script_blocks()[1])
+        sim = next(i for i, ln in enumerate(ls) if ln.startswith("partis simulate --simulate-from-scratch"))
+        conv = next(i for i, ln in enumerate(ls) if "parse-output.py simu_${level}.yaml simu_${level}.tsv" in ln)
+        listing = next(i for i, ln in enumerate(ls) if i > sim and ln == "ls -la >&2")
+        self.assertLess(sim, conv)
+        self.assertLess(conv, listing)
+        self.assertIn("--airr-output", ls[conv])
+        self.assertIn("|| rc=\\$?", ls[conv])
+        self.assertTrue(any("parse-output.py --help > parse_output_help_${level}.txt" in ln for ln in ls[sim:conv]))
+        stop = ls[conv + 1]
+        self.assertIn("test -s simu_${level}.tsv", stop)
+        self.assertIn("cat parse_output_help_${level}.txt >&2", stop)
+        self.assertIn("exit 1", stop)
+        self.assertEqual(ls[sim:listing].count("fi"), 1)
 
 
 class Workflow(unittest.TestCase):

@@ -71,5 +71,6 @@ jobs:
             work/**/.command.out
             work/**/.command.log
             work/**/partis_help_*.txt
+            work/**/parse_output_help_*.txt
           if-no-files-found: warn
           retention-days: 7

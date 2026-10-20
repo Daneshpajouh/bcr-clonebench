@@ -24,7 +24,10 @@
 // partis source lines that name the germline set. It runs in one process
 // (--n-procs 1): with several, partis merged only the .yaml and left the AIRR
 // .tsv in its sub-process folders (CI run 12), so the step lists the task
-// folder and stops at once if simu_<level>.tsv is missing. matplotlib
+// folder and stops at once if simu_<level>.tsv is missing. This partis build
+// writes no AIRR table from simulate at all (CI run 13), so when it is missing
+// the step converts the .yaml with partis's own bin/parse-output.py, keeping
+// its help text and printing it if the conversion fails. matplotlib
 // writes its cache in the task folder (MPLCONFIGDIR).
 process LINEAGES_PARTIS {
     container params.partis_image
@@ -72,6 +75,11 @@ process LINEAGES_PARTIS {
         partis simulate --simulate-from-scratch --force-dont-generate-germline-set --n-sim-events ${params.n_founders} \\
             --n-leaves ${params.mean_family_size} --mutation-multiplier ${mult} --seed ${params.seed} \\
             --n-procs 1 --outfname simu_${level}.yaml --airr-output
+        if [ ! -s simu_${level}.tsv ]; then
+            rc=0; parse-output.py --help > parse_output_help_${level}.txt 2>&1 || rc=\$?
+            rc=0; parse-output.py simu_${level}.yaml simu_${level}.tsv --airr-output >&2 || rc=\$?
+            test -s simu_${level}.tsv || { ls -la >&2; echo "parse-output.py (exit \$rc) wrote no simu_${level}.tsv (listing above); its help follows" >&2; cat parse_output_help_${level}.txt >&2; exit 1; }
+        fi
         ls -la >&2
         test -s simu_${level}.tsv || { echo "partis simulate wrote no simu_${level}.tsv (AIRR) in the task folder (listing above)" >&2; exit 1; }
         python3 ${airr_truth_py} --airr simu_${level}.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
