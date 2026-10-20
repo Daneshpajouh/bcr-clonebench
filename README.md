@@ -55,6 +55,8 @@ This repository does not repeat their method comparison and does not include MiX
 
 One public study from the Observed Antibody Space (OAS), which shares its data under CC BY 4.0: Galson et al. (2015), heavy-chain repertoires from 9 people after hepatitis B vaccination, sampled on days 0, 7, 14, 21 and 28. The first run uses one person's five time points, all isotypes. There is no known answer for real data, so this run reports what the methods agree and disagree on, and how clone expansion after vaccination looks under each.
 
+The subset is fixed by rule before any file is read (`bin/oas_subset.py`): the first subject, in plain sort order, whose units cover all five days; isotype units pooled per day; productive rows with a V call, a J call and a junction; one row per distinct nucleotide sequence; and, if a day still has more than 20,000 rows, the 20,000 with the smallest SHA-256 of a fixed salt and the sequence. The cap does not depend on file or row order. Every count before and after each step, and every input file's SHA-256, goes to `manifest.json`. Sampling within a day can split a clone across the cut, so clone sizes in this run are lower bounds.
+
 ## Running it
 
 | Command | Needs | What it does |
