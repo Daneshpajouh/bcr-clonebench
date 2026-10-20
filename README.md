@@ -72,6 +72,7 @@ The full run uses 2,000 clonal families per level (`params.n_founders`); the tes
 ## Data and tool licences
 
 - partis and immuneSIM: GPL-3.0. They run in their own containers and are not copied into this repository.
+- immuneSIM is no longer on CRAN: it was archived on 2025-06-12 because e-mail to its maintainer was undeliverable (https://CRAN.R-project.org/package=immuneSIM). The image installs its last release, 0.8.7 (packaged 2019-09-20), from the CRAN archive and stops if the file does not match a fixed SHA-256. Its imports come from a CRAN snapshot of 2025-04-10 and Bioconductor 3.20, the last Bioconductor release for R 4.4. See `containers/immunesim/`.
 - OGRDB human IGH germline set: CC0.
 - OAS data: CC BY 4.0, with credit to the original study.
 
