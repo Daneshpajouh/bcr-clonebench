@@ -14,7 +14,8 @@ import sys
 
 LEVEL_ORDER = {"low": 0, "medium": 1, "high": 2}
 COLUMNS = ("level", "error_rate", "method", "n_truth", "n_dropped", "n_not_annotated", "n_not_productive",
-           "n_dropped_later", "pair_precision", "predicted_pairs", "pair_recall", "pair_f1", "ari", "v_gene_exact",
+           "n_dropped_later", "pair_precision", "predicted_pairs", "pair_recall", "pair_f1", "ari", "n_truth_productive",
+           "pair_f1_productive", "ari_productive", "v_gene_exact",
            "v_gene_exact_kept", "j_gene_exact", "j_gene_exact_kept", "mu_mae", "clones_true", "clones_predicted")
 
 
@@ -24,6 +25,8 @@ def row(score):
     a = score["all"]
     why = score.get("dropped_by_reason")
     kept = lambda k: (score.get(k) or {}).get("exact")  # noqa: E731
+    prod = score.get("productive_truth") or {}
+    prod_all = prod.get("all") or {}
     return {"n_not_annotated": why.get("not_annotated", 0) if why is not None else None,
             "n_not_productive": why.get("not_productive", 0) if why is not None else None,
             "n_dropped_later": (why.get("dropped_later", 0) + why.get("other", 0)) if why is not None else None,
@@ -31,7 +34,8 @@ def row(score):
             "j_gene_exact_kept": kept("j_gene_kept"),"level": level, "error_rate": float(rate) if rate else None, "method": method,
             "n_truth": score["n_truth"], "n_dropped": score["n_dropped"],
             "pair_precision": a["pair_precision"], "pair_recall": a["pair_recall"], "pair_f1": a["pair_f1"],
-            "ari": a["ari"], "v_gene_exact": score["v_gene"]["exact"], "j_gene_exact": score["j_gene"]["exact"],
+            "ari": a["ari"], "n_truth_productive": prod.get("n_truth"), "pair_f1_productive": prod_all.get("pair_f1"),
+            "ari_productive": prod_all.get("ari"), "v_gene_exact": score["v_gene"]["exact"], "j_gene_exact": score["j_gene"]["exact"],
             "mu_mae": (score.get("mu_freq") or {}).get("mean_abs_error"),
             "clones_true": score["hill"]["q0"]["true"], "clones_predicted": score["hill"]["q0"]["predicted"]}
 

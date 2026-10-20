@@ -20,6 +20,10 @@ they are read directly and checked to sit at one offset in both full
 alignments. A row with neither form is refused, never given a guessed
 answer, since score_clones.py scores against true_mu_freq.
 
+true_productive copies the simulator's own productive flag (T or F;
+empty when absent), so the score step can also report the reads the
+simulator calls productive.
+
 Standard library only.
 """
 
@@ -28,7 +32,9 @@ import csv
 import sys
 
 NEED = ("sequence_id", "sequence", "clone_id", "v_call", "j_call", "sequence_alignment", "germline_alignment")
-TRUTH = ("sequence_id", "true_clone_id", "true_v_call", "true_d_call", "true_j_call", "true_mu_freq", "level")
+TRUTH = ("sequence_id", "true_clone_id", "true_v_call", "true_d_call", "true_j_call", "true_mu_freq", "level",
+         "true_productive")
+TRUE, FALSE = {"T", "TRUE", "1"}, {"F", "FALSE", "0"}
 
 
 def v_stretch(row):
@@ -67,6 +73,13 @@ def v_mu(row, routes=None):
     return sum(s != g for s, g in pairs) / len(pairs)
 
 
+def productive(row):
+    """T or F from the simulator's own productive column (partis: is_functional, so no mutated conserved codon,
+    in frame and no stop codon); empty when the column is absent or its value is neither, never guessed."""
+    value = (row.get("productive") or "").strip().upper()
+    return "T" if value in TRUE else "F" if value in FALSE else ""
+
+
 def first_call(call):
     return (call or "").split(",")[0].strip()
 
@@ -83,7 +96,7 @@ def convert(rows, level, routes=None):
         yield r["sequence_id"], r["sequence"].upper(), {
             "sequence_id": r["sequence_id"], "true_clone_id": r["clone_id"], "true_v_call": first_call(r["v_call"]),
             "true_d_call": first_call(r.get("d_call")), "true_j_call": first_call(r["j_call"]),
-            "true_mu_freq": f"{v_mu(r, routes):.6f}", "level": level}
+            "true_mu_freq": f"{v_mu(r, routes):.6f}", "level": level, "true_productive": productive(r)}
 
 
 def show_head(path, n=2):

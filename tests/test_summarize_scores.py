@@ -38,6 +38,22 @@ class Summary(unittest.TestCase):
             with open(md) as f:
                 self.assertEqual(len(f.read().splitlines()), 5)
 
+    def test_productive_view_columns(self):
+        with tempfile.TemporaryDirectory() as d:
+            with_view = {**score("low_e0.0/changeo", 1.0),
+                         "productive_truth": {"n_truth": 8, "all": {"pair_f1": 0.75, "ari": 0.5}}}
+            paths = []
+            for i, s in enumerate((with_view, score("low_e0.0/hierarchical", 1.0))):
+                paths.append(os.path.join(d, f"s{i}.json"))
+                with open(paths[-1], "w") as f:
+                    json.dump(s, f)
+            tsv, md = os.path.join(d, "r.tsv"), os.path.join(d, "r.md")
+            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md] + paths), 0)
+            with open(tsv) as f:
+                rows = [dict(zip(ss.COLUMNS, line.rstrip("\n").split("\t"))) for line in list(f)[1:]]
+            got = [(r["method"], r["n_truth_productive"], r["pair_f1_productive"], r["ari_productive"]) for r in rows]
+            self.assertEqual(got, [("changeo", "8", "0.7500", "0.5000"), ("hierarchical", "NA", "NA", "NA")])
+
 
 if __name__ == "__main__":
     unittest.main()

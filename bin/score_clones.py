@@ -17,6 +17,10 @@ and J call, so dropping hard reads cannot raise a score. The same
 metrics on the retained sequences only are reported beside them, with
 the V and J calls of the kept reads (v_gene_kept, j_gene_kept).
 
+When the truth table carries true_productive (the simulator's own flag),
+productive_truth repeats the clone and gene scores over the reads marked
+productive (T), beside the headline over every read.
+
 With --drops (the annotation step's drops table: sequence_id, reason),
 n_dropped is split by reason; a truth read dropped after annotation, or
 not named in the table, counts as dropped_later.
@@ -165,6 +169,25 @@ def score(truth, pred, mu_column=None, drops=None):
     return out
 
 
+def productive_view(truth, pred, mu_column=None, drops=None):
+    """The same scores over the truth reads the simulator marks productive (true_productive T). A productive read
+    the pipeline dropped still counts as its own clone, so dropping reads cannot raise this score either. None when
+    the truth table carries no productive flag."""
+    flags = [(r.get("true_productive") or "").strip() for r in truth]
+    if not any(flags):
+        return None
+    keep = {r["sequence_id"] for r, f in zip(truth, flags) if f == "T"}
+    view = {"n_truth": len(keep), "n_not_productive": flags.count("F"), "n_unknown": flags.count("")}
+    if not keep:
+        return {**view, "n_scored": 0, "n_dropped": 0, "all": None, "v_gene": None, "j_gene": None}
+    part = score([r for r in truth if r["sequence_id"] in keep],
+                 [p for p in pred if p["sequence_id"] in keep], mu_column, drops)
+    view.update({k: part[k] for k in ("n_scored", "n_dropped", "all", "v_gene", "j_gene")})
+    if "dropped_by_reason" in part:
+        view["dropped_by_reason"] = part["dropped_by_reason"]
+    return view
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--truth", required=True)
@@ -178,8 +201,10 @@ def main(argv=None):
         drops = ({r["sequence_id"]: r["reason"]
                   for r in read_tsv(a.drops, ("sequence_id", "reason"), allow_empty=True)}
                  if a.drops else None)
-        res = score(read_tsv(a.truth, TRUTH_COLUMNS),
-                    read_tsv(a.pred, PRED_COLUMNS + ((a.mu_column,) if a.mu_column else ())), a.mu_column, drops)
+        truth = read_tsv(a.truth, TRUTH_COLUMNS)
+        pred = read_tsv(a.pred, PRED_COLUMNS + ((a.mu_column,) if a.mu_column else ()))
+        res = score(truth, pred, a.mu_column, drops)
+        res["productive_truth"] = productive_view(truth, pred, a.mu_column, drops)
     except (OSError, ValueError) as e:
         print(f"score_clones: {e}", file=sys.stderr)
         return 2

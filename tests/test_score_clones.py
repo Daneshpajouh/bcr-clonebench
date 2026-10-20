@@ -10,6 +10,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
 import score_clones as sc  # noqa: E402
+from score_clones import PRED_COLUMNS  # noqa: E402
 
 
 class PairScores(unittest.TestCase):
@@ -158,6 +159,58 @@ class Cli(unittest.TestCase):
         head_only = self.tsv("h.tsv", [sc.TRUTH_COLUMNS])
         with self.assertRaisesRegex(ValueError, "no rows"):
             sc.read_tsv(head_only, sc.TRUTH_COLUMNS)
+
+
+class ProductiveView(unittest.TestCase):
+    # Director ruling 2026-10-20 (truth view A): the all-reads score stays the headline; the same scores are added
+    # over the reads the simulator marks productive. Values worked by hand.
+    @staticmethod
+    def truth(*rows):
+        cols = sc.TRUTH_COLUMNS + ("true_productive",)
+        return [dict(zip(cols, r)) for r in rows]
+
+    @staticmethod
+    def pred(*rows):
+        return [dict(zip(PRED_COLUMNS, r)) for r in rows]
+
+    def test_scores_over_productive_reads_only(self):
+        # s1, s2, s3 productive in family A; s4 not productive, wrongly put with them. Over every read: 3 true
+        # pairs, 6 predicted, 3 right, so precision 0.5. Over the productive reads: 3 of 3 pairs right.
+        truth = self.truth(("s1", "A", "v", "j", "0", "T"), ("s2", "A", "v", "j", "0", "T"),
+                           ("s3", "A", "v", "j", "0", "T"), ("s4", "B", "v", "j", "0", "F"))
+        pred = self.pred(("s1", "1", "v", "j"), ("s2", "1", "v", "j"), ("s3", "1", "v", "j"), ("s4", "1", "v", "j"))
+        view = sc.productive_view(truth, pred)
+        self.assertEqual((view["n_truth"], view["n_not_productive"], view["n_unknown"]), (3, 1, 0))
+        self.assertEqual((view["all"]["pair_precision"], view["all"]["pair_f1"]), (1.0, 1.0))
+        self.assertEqual(sc.score(truth, pred)["all"]["pair_precision"], 0.5)
+
+    def test_a_dropped_productive_read_still_counts_as_its_own_clone(self):
+        # s3 is productive but dropped: 3 true pairs, 1 predicted (s1-s2), so recall 1/3 in the view too.
+        truth = self.truth(("s1", "A", "v", "j", "0", "T"), ("s2", "A", "v", "j", "0", "T"),
+                           ("s3", "A", "v", "j", "0", "T"))
+        view = sc.productive_view(truth, self.pred(("s1", "1", "v", "j"), ("s2", "1", "v", "j")))
+        self.assertEqual((view["n_scored"], view["n_dropped"]), (2, 1))
+        self.assertAlmostEqual(view["all"]["pair_recall"], 1 / 3)
+
+    def test_no_flag_gives_no_view_and_no_productive_read_gives_an_empty_one(self):
+        plain = [dict(zip(sc.TRUTH_COLUMNS, ("s1", "A", "v", "j", "0")))]
+        self.assertIsNone(sc.productive_view(plain, self.pred(("s1", "1", "v", "j"))))
+        unknown = self.truth(("s1", "A", "v", "j", "0", ""), ("s2", "A", "v", "j", "0", "F"))
+        view = sc.productive_view(unknown, self.pred(("s1", "1", "v", "j")))
+        self.assertEqual((view["n_truth"], view["n_unknown"], view["all"]), (0, 1, None))
+
+    def test_the_view_is_written_by_the_cli(self):
+        with tempfile.TemporaryDirectory() as d:
+            t, p, o = (os.path.join(d, n) for n in ("t.tsv", "p.tsv", "o.json"))
+            with open(t, "w") as f:
+                f.write("\t".join(sc.TRUTH_COLUMNS + ("true_productive",)) + "\n")
+                f.write("s1\tA\tv\tj\t0\tT\ns2\tA\tv\tj\t0\tF\n")
+            with open(p, "w") as f:
+                f.write("sequence_id\tclone_id\tv_call\tj_call\ns1\t1\tv\tj\ns2\t1\tv\tj\n")
+            self.assertEqual(sc.main(["--truth", t, "--pred", p, "--out-json", o]), 0)
+            with open(o) as f:
+                r = json.load(f)
+            self.assertEqual((r["n_truth"], r["productive_truth"]["n_truth"]), (2, 1))
 
 
 if __name__ == "__main__":

@@ -31,6 +31,17 @@ class Convert(unittest.TestCase):
         self.assertEqual((t["true_clone_id"], t["true_v_call"], t["true_mu_freq"], t["level"]),
                          ("c1", "IGHV1-2*02", "0.000000", "low"))
 
+    def test_productive_flag_is_copied_never_guessed(self):
+        # Director ruling 2026-10-20 (truth view A): the simulator's own productive flag goes into the truth table.
+        base = row("s1", "c1", "ACGTACGTAC", "ACGTACGTAC", 10)
+        cases = [("T", "T"), ("True", "T"), ("1", "T"), ("F", "F"), ("false", "F"), ("0", "F"), ("", ""),
+                 ("maybe", "")]
+        for value, want in cases:
+            with self.subTest(value):
+                t = list(at.convert([{**base, "productive": value}], "low"))[0][2]
+                self.assertEqual(t["true_productive"], want)
+        self.assertEqual(list(at.convert([base], "low"))[0][2]["true_productive"], "")  # column absent
+
     def test_refusals(self):
         bad = [row("s1", "c1", "ACGT", "ACG", 3), {**row("s2", "c1", "ACGT", "ACGT", 4), "v_alignment_end": ""},
                {**row("s3", "", "ACGT", "ACGT", 4)}]

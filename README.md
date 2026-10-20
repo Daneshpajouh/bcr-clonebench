@@ -32,6 +32,8 @@ Every tool runs in a container named by digest in `images.lock`. The pipeline re
 
 A read the pipeline drops (failed QC or annotation) still counts: as its own one-read clone and as a wrong V and J call. Dropping hard reads therefore cannot raise a score. The same metrics on the retained reads only are reported beside them.
 
+The headline scores cover every simulated read. Where the simulator marks each read productive or not (partis does), the same clone and gene scores are also reported over the productive reads alone (n_truth_productive, pair_f1_productive, ari_productive). A productive read the pipeline drops still counts as its own clone there too.
+
 ## Two independent generators
 
 partis (optionally with its bcr-phylo mode) is the primary source of truth. A second generator, `bin/expand_lineages.py`, grows naive immuneSIM rearrangements into families on random lineage trees, with mutations weighted toward WRC and GYW hot spots and no stop codons. It is simpler than partis and is reported in its own rows (`--lineage_simulator inrepo`).
