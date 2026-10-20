@@ -1,11 +1,14 @@
 // Clonal grouping by one method: changeo (DefineClones), or SCOPer's
 // identical, hierarchical and spectral methods.
+// clones_scoper.R is staged into the task folder and run with Rscript, since
+// the project's bin folder is not reachable inside a container (CI run 8).
 process CLONES {
     container params.suite_image
     tag "${level} ${method}"
 
     input:
     tuple val(level), path(db), path(threshold), val(method)
+    path clones_scoper_r
 
     output:
     tuple val(level), val(method), path("clones_${level}_${method}.tsv")
@@ -18,7 +21,7 @@ process CLONES {
         """
     else
         """
-        clones_scoper.R ${db} ${method} \$(cat ${threshold}) clones_${level}_${method}.tsv
+        Rscript ${clones_scoper_r} ${db} ${method} \$(cat ${threshold}) clones_${level}_${method}.tsv
         """
 
     stub:

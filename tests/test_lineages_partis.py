@@ -39,10 +39,15 @@ class LineagesPartisScript(unittest.TestCase):
             self.assertIn(":/opt/conda/envs/r/bin:", first)
             self.assertEqual(second, 'echo "PATH=\\$PATH" >&2')
 
+    def test_task_folder_listed_after_path_print(self):
+        # CI run 8: the run log must show what was staged into the task folder.
+        for block in script_blocks():
+            self.assertEqual(lines(block)[2], "ls -la >&2")
+
     def test_missing_tool_fails_fast_with_message(self):
         tools = ["bcr-phylo-run.py", "partis"]
         for block, tool in zip(script_blocks(), tools):
-            check = lines(block)[2]
+            check = lines(block)[3]
             self.assertIn(f"/partis/bin/{tool}", check)
             self.assertIn("test -x", check)
             self.assertIn("exit 127", check)

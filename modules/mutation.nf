@@ -1,5 +1,7 @@
 // Germlines per clone with the D region masked, then the observed
 // mutation frequency over the IMGT V region (SHazaM).
+// mutation.R is staged into the task folder and run with Rscript, since the
+// project's bin folder is not reachable inside a container (CI run 8).
 process MUTATION {
     container params.suite_image
     tag "${level} ${method}"
@@ -7,6 +9,7 @@ process MUTATION {
     input:
     tuple val(level), val(method), path(clones)
     path reference
+    path mutation_r
 
     output:
     tuple val(level), val(method), path("mutated_${level}_${method}.tsv")
@@ -16,7 +19,7 @@ process MUTATION {
     CreateGermlines.py -d ${clones} -g dmask --cloned --format airr \\
         -r ${reference}/germlines/IGHV.fasta ${reference}/germlines/IGHD.fasta ${reference}/germlines/IGHJ.fasta \\
         --outname germ
-    mutation.R germ_germ-pass.tsv mutated_${level}_${method}.tsv
+    Rscript ${mutation_r} germ_germ-pass.tsv mutated_${level}_${method}.tsv
     """
 
     stub:

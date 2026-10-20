@@ -9,13 +9,17 @@
 // with a message) if the tool is missing. The task's PATH is built by
 // Nextflow, not taken from the image's ENV (CI run 7: R was in the image
 // but not on the task's PATH), so the scripts also name partis-r's R
-// folder and print the PATH they run with.
+// folder and print the PATH they run with. bin/airr_truth.py is staged into
+// the task folder as an input and run with python3 (CI run 8: the project's
+// bin folder was not reachable inside the partis-r container), and each
+// script lists the task folder so the run log shows what was staged.
 process LINEAGES_PARTIS {
     container params.partis_image
     tag "${level}"
 
     input:
     val level
+    path airr_truth_py
 
     output:
     tuple val(level), path("reads_${level}.fasta"), path("truth_${level}.tsv"), emit: lineages
@@ -27,18 +31,20 @@ process LINEAGES_PARTIS {
         """
         export PATH=/partis/bin:/opt/conda/bin:/opt/conda/envs/r/bin:\$PATH
         echo "PATH=\$PATH" >&2
+        ls -la >&2
         test -x /partis/bin/bcr-phylo-run.py || { echo "bcr-phylo-run.py not found at /partis/bin/bcr-phylo-run.py in ${params.partis_image}" >&2; exit 127; }
         rc=0; bcr-phylo-run.py --help > partis_help_${level}.txt 2>&1 || rc=\$?
         test \$rc -eq 0 || echo "bcr-phylo-run.py --help exited \$rc; help text kept in partis_help_${level}.txt" >&2
         bcr-phylo-run.py --base-outdir bp_${level} --seed ${params.seed} ${params.bcr_phylo_args}
         simu=\$(find bp_${level} -name '*.tsv' | head -n 1)
         test -n "\$simu" || { echo "bcr-phylo-run.py wrote no AIRR table" >&2; exit 1; }
-        airr_truth.py --airr "\$simu" --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
+        python3 ${airr_truth_py} --airr "\$simu" --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
         """
     else
         """
         export PATH=/partis/bin:/opt/conda/bin:/opt/conda/envs/r/bin:\$PATH
         echo "PATH=\$PATH" >&2
+        ls -la >&2
         test -x /partis/bin/partis || { echo "partis not found at /partis/bin/partis in ${params.partis_image}" >&2; exit 127; }
         command -v R > /dev/null || { echo "R not found on PATH in ${params.partis_image}: partis needs R and TreeSim to draw trees; use the partis-r image (images.lock partis_r_image)" >&2; exit 127; }
         rc=0; partis simulate --help > partis_help_${level}.txt 2>&1 || rc=\$?
@@ -46,7 +52,7 @@ process LINEAGES_PARTIS {
         partis simulate --simulate-from-scratch --n-sim-events ${params.n_founders} \\
             --n-leaves ${params.mean_family_size} --mutation-multiplier ${mult} --seed ${params.seed} \\
             --outfname simu_${level}.yaml --airr-output
-        airr_truth.py --airr simu_${level}.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
+        python3 ${airr_truth_py} --airr simu_${level}.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
         """
 
     stub:
@@ -61,6 +67,6 @@ process LINEAGES_PARTIS {
             printf 'c%s_m%s\\t%s\\tc%s\\tIGHV1-2*02\\tIGHD3-10*01\\tIGHJ4*02\\t%s\\tCAGGTGCAGCTGGTGCAGTCTGGGGCTGCG\\t27\\n' \$c \$m \$seq \$c \$seq >> simu.tsv
         done
     done
-    airr_truth.py --airr simu.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
+    python3 ${airr_truth_py} --airr simu.tsv --level ${level} --reads reads_${level}.fasta --truth truth_${level}.tsv
     """
 }
