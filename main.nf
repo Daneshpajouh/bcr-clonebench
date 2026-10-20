@@ -3,8 +3,8 @@
  * bcr-clonebench: score B-cell receptor clonal grouping methods against
  * simulated human IGH repertoires whose clonal families are known.
  *
- * founders (immuneSIM, no hypermutation) -> lineages at three mutation
- * levels (bin/expand_lineages.py) -> IgBLAST annotation and Change-O
+ * clonal families at three mutation levels (partis; or immuneSIM founders
+ * grown by bin/expand_lineages.py) -> IgBLAST annotation and Change-O
  * table -> clonal grouping by four methods -> hypermutation by SHazaM ->
  * scores against the known answers (bin/score_clones.py) -> one table.
  */
@@ -12,6 +12,7 @@ nextflow.enable.dsl = 2
 
 include { FOUNDERS } from './modules/founders'
 include { LINEAGES } from './modules/lineages'
+include { LINEAGES_PARTIS } from './modules/lineages_partis'
 include { ANNOTATE } from './modules/annotate'
 include { THRESHOLD } from './modules/threshold'
 include { CLONES } from './modules/clones'
@@ -27,11 +28,19 @@ def requireDigest(name, image) {
 
 workflow {
     requireDigest('suite_image', params.suite_image)
-    requireDigest('immunesim_image', params.immunesim_image)
-
-    founders = FOUNDERS(params.n_founders, params.seed)
     levels = Channel.fromList(params.levels)
-    lineages = LINEAGES(founders.combine(levels))          // [level, reads, truth]
+    if (params.lineage_simulator == 'partis') {
+        // the clonal truth comes from partis (Director ruling 2026-10-19 19:52)
+        requireDigest('partis_image', params.partis_image)
+        lineages = LINEAGES_PARTIS(levels).lineages             // [level, reads, truth]
+    } else if (params.lineage_simulator == 'inrepo') {
+        // immuneSIM founders grown by bin/expand_lineages.py: an independent second generator
+        requireDigest('immunesim_image', params.immunesim_image)
+        founders = FOUNDERS(params.n_founders, params.seed)
+        lineages = LINEAGES(founders.combine(levels))
+    } else {
+        error "params.lineage_simulator must be partis or inrepo"
+    }
     annotated = ANNOTATE(lineages.map { level, reads, truth -> [level, reads] }, file(params.reference_dir))
     thresholds = THRESHOLD(annotated)                       // [level, db, threshold file]
     methods = Channel.fromList(params.methods)

@@ -2,3 +2,4 @@
 # a machine with Docker; the pipeline refuses to run without them.
 suite_image	immcantation/suite:4.5.0	digest-not-yet-pinned
 immunesim_image	containers/immunesim (built from containers/immunesim/Dockerfile)	digest-not-yet-pinned
+partis_image	quay.io/biocontainers/partis or psathyrella/partis (chosen at pin time)	digest-not-yet-pinned
