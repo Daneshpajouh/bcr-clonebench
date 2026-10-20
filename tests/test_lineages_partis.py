@@ -31,10 +31,18 @@ class LineagesPartisScript(unittest.TestCase):
             first = lines(block)[0]
             self.assertRegex(first, r"^export PATH=\S*/partis/bin:")
 
+    def test_r_folder_on_path_and_path_printed_before_checks(self):
+        # CI run 7: Nextflow builds the task PATH itself, so the image's ENV PATH tail
+        # (/opt/conda/envs/r/bin) was not seen; the scripts name it and print PATH.
+        for block in script_blocks():
+            first, second = lines(block)[:2]
+            self.assertIn(":/opt/conda/envs/r/bin:", first)
+            self.assertEqual(second, 'echo "PATH=\\$PATH" >&2')
+
     def test_missing_tool_fails_fast_with_message(self):
         tools = ["bcr-phylo-run.py", "partis"]
         for block, tool in zip(script_blocks(), tools):
-            check = lines(block)[1]
+            check = lines(block)[2]
             self.assertIn(f"/partis/bin/{tool}", check)
             self.assertIn("test -x", check)
             self.assertIn("exit 127", check)

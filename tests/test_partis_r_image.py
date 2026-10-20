@@ -110,8 +110,8 @@ class ModuleTest(unittest.TestCase):
 
     def test_missing_r_fails_fast_before_simulation(self):
         lines = [ln.strip() for ln in self.partis_block.strip().splitlines() if ln.strip()]
-        self.assertTrue(lines[2].startswith("command -v R > /dev/null ||"), lines[2])
-        self.assertIn("exit 127", lines[2])
+        self.assertTrue(lines[3].startswith("command -v R > /dev/null ||"), lines[3])
+        self.assertIn("exit 127", lines[3])
         self.assertLess(self.partis_block.index("command -v R"), self.partis_block.index("partis simulate --simulate"))
 
     def test_no_weibull_root_option(self):

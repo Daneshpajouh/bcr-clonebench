@@ -6,7 +6,10 @@
 // the results, so every option used can be checked against the installed
 // version. The partis image keeps its tools in /partis/bin, which is not
 // on the image's PATH, so each script adds it and stops at once (exit 127,
-// with a message) if the tool is missing.
+// with a message) if the tool is missing. The task's PATH is built by
+// Nextflow, not taken from the image's ENV (CI run 7: R was in the image
+// but not on the task's PATH), so the scripts also name partis-r's R
+// folder and print the PATH they run with.
 process LINEAGES_PARTIS {
     container params.partis_image
     tag "${level}"
@@ -22,7 +25,8 @@ process LINEAGES_PARTIS {
     def mult = params.mutation_multiplier[level]
     if (params.lineage_mode == 'bcr-phylo')
         """
-        export PATH=/partis/bin:/opt/conda/bin:\$PATH
+        export PATH=/partis/bin:/opt/conda/bin:/opt/conda/envs/r/bin:\$PATH
+        echo "PATH=\$PATH" >&2
         test -x /partis/bin/bcr-phylo-run.py || { echo "bcr-phylo-run.py not found at /partis/bin/bcr-phylo-run.py in ${params.partis_image}" >&2; exit 127; }
         rc=0; bcr-phylo-run.py --help > partis_help_${level}.txt 2>&1 || rc=\$?
         test \$rc -eq 0 || echo "bcr-phylo-run.py --help exited \$rc; help text kept in partis_help_${level}.txt" >&2
@@ -33,7 +37,8 @@ process LINEAGES_PARTIS {
         """
     else
         """
-        export PATH=/partis/bin:/opt/conda/bin:\$PATH
+        export PATH=/partis/bin:/opt/conda/bin:/opt/conda/envs/r/bin:\$PATH
+        echo "PATH=\$PATH" >&2
         test -x /partis/bin/partis || { echo "partis not found at /partis/bin/partis in ${params.partis_image}" >&2; exit 127; }
         command -v R > /dev/null || { echo "R not found on PATH in ${params.partis_image}: partis needs R and TreeSim to draw trees; use the partis-r image (images.lock partis_r_image)" >&2; exit 127; }
         rc=0; partis simulate --help > partis_help_${level}.txt 2>&1 || rc=\$?
