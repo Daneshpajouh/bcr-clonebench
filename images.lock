@@ -1,0 +1,4 @@
+# Container images by digest. 'make pin' writes the digests after a pull on
+# a machine with Docker; the pipeline refuses to run without them.
+suite_image	immcantation/suite:4.5.0	digest-not-yet-pinned
+immunesim_image	containers/immunesim (built from containers/immunesim/Dockerfile)	digest-not-yet-pinned

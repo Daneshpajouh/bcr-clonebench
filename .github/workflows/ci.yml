@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Unit tests (standard library only)
+        run: make test
+
+  pipeline-stub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: nf-core/setup-nextflow@v2
+      - name: Pipeline wiring in stub mode (no tools, no containers)
+        run: make stub
+
+  known-answer:
+    # The whole known-answer test in the pinned containers, on the small test profile.
+    runs-on: ubuntu-latest
+    needs: [unit, pipeline-stub]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: nf-core/setup-nextflow@v2
+      - name: Build the immuneSIM image and pin both images
+        run: make pin
+      - name: Known-answer run
+        run: make known-answer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results
+          path: results/

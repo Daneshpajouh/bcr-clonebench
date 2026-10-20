@@ -3,3 +3,5 @@ __pycache__/
 /work/
 /results/
 .nextflow*
+/reference/*
+!/reference/README.md
