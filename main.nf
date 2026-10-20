@@ -4,7 +4,8 @@
  * simulated human IGH repertoires whose clonal families are known.
  *
  * clonal families at three mutation levels (partis; or immuneSIM founders
- * grown by bin/expand_lineages.py) -> IgBLAST annotation and Change-O
+ * grown by bin/expand_lineages.py) -> sequencing errors at each rate ->
+ * IgBLAST annotation and Change-O
  * table -> clonal grouping by four methods -> hypermutation by SHazaM ->
  * scores against the known answers (bin/score_clones.py) -> one table.
  */
@@ -13,6 +14,7 @@ nextflow.enable.dsl = 2
 include { FOUNDERS } from './modules/founders'
 include { LINEAGES } from './modules/lineages'
 include { LINEAGES_PARTIS } from './modules/lineages_partis'
+include { SEQ_ERRORS } from './modules/seq_errors'
 include { ANNOTATE } from './modules/annotate'
 include { THRESHOLD } from './modules/threshold'
 include { CLONES } from './modules/clones'
@@ -41,12 +43,14 @@ workflow {
     } else {
         error "params.lineage_simulator must be partis or inrepo"
     }
-    annotated = ANNOTATE(lineages.map { level, reads, truth -> [level, reads] }, file(params.reference_dir))
+    // every level at every sequencing-error rate; labels become <level>_e<rate>
+    noisy = SEQ_ERRORS(lineages.combine(Channel.fromList(params.error_rates)))
+    annotated = ANNOTATE(noisy.map { label, reads, truth -> [label, reads] }, file(params.reference_dir))
     thresholds = THRESHOLD(annotated)                       // [level, db, threshold file]
     methods = Channel.fromList(params.methods)
     clones = CLONES(thresholds.combine(methods))            // [level, method, clones]
     mutated = MUTATION(clones, file(params.reference_dir))  // [level, method, clones with mu_freq]
-    truths = lineages.map { level, reads, truth -> [level, truth] }
+    truths = noisy.map { label, reads, truth -> [label, truth] }
     scores = SCORE(mutated.combine(truths, by: 0))          // json per level and method
     SUMMARY(scores.collect())
 }

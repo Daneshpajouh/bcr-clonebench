@@ -21,7 +21,8 @@ class Summary(unittest.TestCase):
     def test_order_and_na(self):
         with tempfile.TemporaryDirectory() as d:
             paths = []
-            for i, (label, p) in enumerate((("high/changeo", 0.8), ("low/spectral", None), ("low/changeo", 1.0))):
+            for i, (label, p) in enumerate((("high_e0.0/changeo", 0.8), ("low_e0.005/changeo", None),
+                                            ("low_e0.0/changeo", 1.0))):
                 paths.append(os.path.join(d, f"s{i}.json"))
                 with open(paths[-1], "w") as f:
                     json.dump(score(label, p), f)
@@ -30,9 +31,10 @@ class Summary(unittest.TestCase):
             with open(tsv) as f:
                 rows = [line.rstrip("\n").split("\t") for line in f]
             self.assertEqual(rows[0], list(ss.COLUMNS))
-            self.assertEqual([r[:2] for r in rows[1:]], [["low", "changeo"], ["low", "spectral"], ["high", "changeo"]])
-            self.assertEqual(rows[2][4], "NA")  # undefined precision is NA, never 0
-            self.assertEqual(rows[1][6], "NA")  # undefined F1
+            self.assertEqual([r[:3] for r in rows[1:]], [["low", "0.0000", "changeo"], ["low", "0.0050", "changeo"],
+                                                         ["high", "0.0000", "changeo"]])
+            self.assertEqual(rows[2][5], "NA")  # undefined precision is NA, never 0
+            self.assertEqual(rows[1][7], "NA")  # undefined F1
             with open(md) as f:
                 self.assertEqual(len(f.read().splitlines()), 5)
 

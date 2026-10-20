@@ -3,7 +3,8 @@
 
     summarize_scores.py --out-tsv results.tsv --out-md results.md score_*.json
 
-Rows are sorted by mutation level (low, medium, high) and then method.
+Rows are sorted by mutation level (low, medium, high), then sequencing
+error rate, then method.
 Undefined values (no predicted pairs) are written as NA, never as 0.
 """
 
@@ -12,14 +13,16 @@ import json
 import sys
 
 LEVEL_ORDER = {"low": 0, "medium": 1, "high": 2}
-COLUMNS = ("level", "method", "n_truth", "n_dropped", "pair_precision", "pair_recall", "pair_f1", "ari",
-           "v_gene_exact", "j_gene_exact", "mu_mae", "clones_true", "clones_predicted")
+COLUMNS = ("level", "error_rate", "method", "n_truth", "n_dropped", "pair_precision", "pair_recall", "pair_f1",
+           "ari", "v_gene_exact", "j_gene_exact", "mu_mae", "clones_true", "clones_predicted")
 
 
 def row(score):
-    level, _, method = score["label"].partition("/")
+    run, _, method = score["label"].partition("/")
+    level, _, rate = run.partition("_e")
     a = score["all"]
-    return {"level": level, "method": method, "n_truth": score["n_truth"], "n_dropped": score["n_dropped"],
+    return {"level": level, "error_rate": float(rate) if rate else None, "method": method,
+            "n_truth": score["n_truth"], "n_dropped": score["n_dropped"],
             "pair_precision": a["pair_precision"], "pair_recall": a["pair_recall"], "pair_f1": a["pair_f1"],
             "ari": a["ari"], "v_gene_exact": score["v_gene"]["exact"], "j_gene_exact": score["j_gene"]["exact"],
             "mu_mae": (score.get("mu_freq") or {}).get("mean_abs_error"),
@@ -44,7 +47,7 @@ def main(argv=None):
     for p in a.scores:
         with open(p, encoding="utf-8") as f:
             rows.append(row(json.load(f)))
-    rows.sort(key=lambda r: (LEVEL_ORDER.get(r["level"], 9), r["method"]))
+    rows.sort(key=lambda r: (LEVEL_ORDER.get(r["level"], 9), r["error_rate"] or 0.0, r["method"]))
     with open(a.out_tsv, "w", encoding="utf-8") as f:
         f.write("\t".join(COLUMNS) + "\n")
         for r in rows:

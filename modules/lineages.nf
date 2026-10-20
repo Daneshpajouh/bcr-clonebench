@@ -11,7 +11,7 @@ process LINEAGES {
     script:
     """
     expand_lineages.py --founders ${founders} --level ${level} --seed ${params.seed} \\
-        --mean-family-size ${params.mean_family_size} --error-rate ${params.error_rate} \\
+        --mean-family-size ${params.mean_family_size} --error-rate 0 \\
         --reads reads_${level}.fasta --truth truth_${level}.tsv
     """
 
