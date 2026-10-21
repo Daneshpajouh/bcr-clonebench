@@ -78,8 +78,7 @@ def main(argv=None):
         f.writelines("\t".join(fmt(r[c]) for c in COLUMNS) + "\n" for r in rows)
     with open(a.out_md, "w", encoding="utf-8") as f:
         f.write("| " + " | ".join(COLUMNS) + " |\n|" + "---|" * len(COLUMNS) + "\n")
-        for r in rows:
-            f.write("| " + " | ".join(fmt(r[c]) for c in COLUMNS) + " |\n")
+        f.writelines("| " + " | ".join(fmt(r[c]) for c in COLUMNS) + " |\n" for r in rows)
     print(f"{len(rows)} rows")
     return 0
 

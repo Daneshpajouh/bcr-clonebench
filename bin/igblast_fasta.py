@@ -31,8 +31,8 @@ def allele_name(header):
 def read_fasta(path):
     records, name, seq = [], None, []
     with open(path) as fh:
-        for line in fh:
-            line = line.rstrip("\n")
+        for raw in fh:
+            line = raw.rstrip("\n")
             if line.startswith(">"):
                 if name is not None:
                     records.append((name, "".join(seq)))

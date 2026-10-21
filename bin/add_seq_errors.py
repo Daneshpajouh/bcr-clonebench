@@ -23,8 +23,8 @@ BASES = "ACGT"
 def read_fasta(path):
     name, seq = None, []
     with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
+        for raw in f:
+            line = raw.strip()
             if line.startswith(">"):
                 if name is not None:
                     yield name, "".join(seq)

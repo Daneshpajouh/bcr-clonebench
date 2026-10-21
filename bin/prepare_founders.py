@@ -32,8 +32,8 @@ STOPS = {"TAA", "TAG", "TGA"}
 def read_fasta(path):
     seqs, name = {}, None
     with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
+        for raw in f:
+            line = raw.strip()
             if line.startswith(">"):
                 name = line[1:].split()[0]
                 seqs[name] = []

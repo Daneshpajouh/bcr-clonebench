@@ -56,8 +56,10 @@ def write_sha256(path, sha256):
             if fields[4] != NOT_PINNED:
                 raise ValueError(f"{KEY} is already pinned to {fields[4]}; not changed")
             fields[4] = "sha256:" + sha256
-            line, done = "\t".join(fields) + "\n", True
-        out.append(line)
+            out.append("\t".join(fields) + "\n")
+            done = True
+        else:
+            out.append(line)
     if not done:
         raise ValueError(f"{path}: no {KEY} row")
     with open(path, "w", encoding="utf-8") as fh:
@@ -92,8 +94,7 @@ def split(records):
 
 def write_fasta(path, records):
     with open(path, "w", encoding="utf-8") as fh:
-        for name, seq in records:
-            fh.write(f">{name}\n{seq}\n")
+        fh.writelines(f">{name}\n{seq}\n" for name, seq in records)
 
 
 def main(argv):

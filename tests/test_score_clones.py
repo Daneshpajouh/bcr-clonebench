@@ -165,7 +165,7 @@ class ProductiveView(unittest.TestCase):
     # over the reads the simulator marks productive. Values worked by hand.
     @staticmethod
     def truth(*rows):
-        cols = sc.TRUTH_COLUMNS + ("true_productive",)
+        cols = (*sc.TRUTH_COLUMNS, "true_productive")
         return [dict(zip(cols, r)) for r in rows]
 
     @staticmethod
@@ -202,7 +202,7 @@ class ProductiveView(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             t, p, o = (os.path.join(d, n) for n in ("t.tsv", "p.tsv", "o.json"))
             with open(t, "w") as f:
-                f.write("\t".join(sc.TRUTH_COLUMNS + ("true_productive",)) + "\n")
+                f.write("\t".join((*sc.TRUTH_COLUMNS, "true_productive")) + "\n")
                 f.write("s1\tA\tv\tj\t0\tT\ns2\tA\tv\tj\t0\tF\n")
             with open(p, "w") as f:
                 f.write("sequence_id\tclone_id\tv_call\tj_call\ns1\t1\tv\tj\ns2\t1\tv\tj\n")
@@ -220,7 +220,7 @@ class PerRead(unittest.TestCase):
     # CI run 17 review, item (4): one row per truth read, with its true and called V and J, whether the
     # call set includes the true gene, and whether the read was kept or why it was dropped. Values by hand.
     def setUp(self):
-        cols = sc.TRUTH_COLUMNS + ("true_productive",)
+        cols = (*sc.TRUTH_COLUMNS, "true_productive")
         self.truth = [dict(zip(cols, r)) for r in (
             ("s1", "A", "IGHV1-2*02", "IGHJ4*02", "0.04", "T"),
             ("s2", "A", "IGHV1-2*02", "IGHJ4*02", "0.04", "T"),
@@ -269,7 +269,7 @@ class PerRead(unittest.TestCase):
                 f.write("\t".join(header) + "\n")
                 f.writelines("\t".join(x[c] for c in header) + "\n" for x in rows)
             return p
-        truth = tsv("t.tsv", sc.TRUTH_COLUMNS + ("true_productive",), self.truth)
+        truth = tsv("t.tsv", (*sc.TRUTH_COLUMNS, "true_productive"), self.truth)
         pred = tsv("p.tsv", PRED_COLUMNS, self.pred)
         drops = tsv("d.tsv", ("sequence_id", "reason"), [{"sequence_id": "s3", "reason": "not_productive"}])
         out, reads = os.path.join(d.name, "o.json"), os.path.join(d.name, "reads.tsv")

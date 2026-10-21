@@ -27,7 +27,7 @@ class Summary(unittest.TestCase):
                 with open(paths[-1], "w") as f:
                     json.dump(score(label, p), f)
             tsv, md = os.path.join(d, "r.tsv"), os.path.join(d, "r.md")
-            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md] + paths), 0)
+            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md, *paths]), 0)
             with open(tsv) as f:
                 rows = [line.rstrip("\n").split("\t") for line in f]
             self.assertEqual(rows[0], list(ss.COLUMNS))
@@ -48,7 +48,7 @@ class Summary(unittest.TestCase):
                 with open(paths[-1], "w") as f:
                     json.dump(s, f)
             tsv, md = os.path.join(d, "r.tsv"), os.path.join(d, "r.md")
-            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md] + paths), 0)
+            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md, *paths]), 0)
             with open(tsv) as f:
                 rows = [dict(zip(ss.COLUMNS, line.rstrip("\n").split("\t"))) for line in list(f)[1:]]
             got = [(r["method"], r["n_truth_productive"], r["pair_f1_productive"], r["ari_productive"]) for r in rows]
@@ -66,7 +66,7 @@ class Summary(unittest.TestCase):
                 with open(paths[-1], "w") as f:
                     json.dump(s, f)
             tsv, md = os.path.join(d, "r.tsv"), os.path.join(d, "r.md")
-            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md] + paths), 0)
+            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md, *paths]), 0)
             with open(tsv) as f:
                 rows = [dict(zip(ss.COLUMNS, line.rstrip("\n").split("\t"))) for line in list(f)[1:]]
             got = [(r["level"], r["v_gene_exact"], r["v_gene_includes_true"], r["j_gene_includes_true"]) for r in rows]
@@ -86,7 +86,7 @@ class Summary(unittest.TestCase):
                 with open(paths[-1], "w") as f:
                     json.dump(s, f)
             tsv, md = os.path.join(d, "r.tsv"), os.path.join(d, "r.md")
-            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md] + paths), 0)
+            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md, *paths]), 0)
             with open(tsv) as f:
                 rows = [dict(zip(ss.COLUMNS, line.rstrip("\n").split("\t"))) for line in list(f)[1:]]
             cols = ("clones_true", "clones_predicted", "hill_q1_true", "hill_q1_predicted", "hill_q2_true",
