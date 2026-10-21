@@ -6,7 +6,7 @@
  * clonal families at three mutation levels (partis; or immuneSIM founders
  * grown by bin/expand_lineages.py) -> sequencing errors at each rate ->
  * IgBLAST annotation and Change-O
- * table -> clonal grouping by four methods -> hypermutation by SHazaM ->
+ * table -> clonal grouping by five methods -> hypermutation by SHazaM ->
  * scores against the known answers (bin/score_clones.py) -> one table.
  */
 nextflow.enable.dsl = 2

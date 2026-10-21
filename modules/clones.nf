@@ -1,5 +1,5 @@
 // Clonal grouping by one method: changeo (DefineClones), or SCOPer's
-// identical, hierarchical and spectral methods.
+// identical, hierarchical, spectral (junction only) and spectral_vj methods.
 // clones_scoper.R is staged into the task folder and run with Rscript, since
 // the project's bin folder is not reachable inside a container (CI run 8).
 // changeo also keeps DefineClones.py --help in the results (tool-help/), so
