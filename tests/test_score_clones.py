@@ -9,8 +9,8 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import score_clones as sc  # noqa: E402
-from score_clones import PRED_COLUMNS  # noqa: E402
+import score_clones as sc
+from score_clones import PRED_COLUMNS
 
 
 class PairScores(unittest.TestCase):
@@ -102,8 +102,7 @@ class Cli(unittest.TestCase):
         p = os.path.join(self.d.name, name)
         with open(p, "w") as f:
             f.write("\t".join(rows[0]) + "\n")
-            for r in rows[1:]:
-                f.write("\t".join(r) + "\n")
+            f.writelines("\t".join(r) + "\n" for r in rows[1:])
         return p
 
     def test_run_and_errors(self):
@@ -268,8 +267,7 @@ class PerRead(unittest.TestCase):
             p = os.path.join(d.name, name)
             with open(p, "w") as f:
                 f.write("\t".join(header) + "\n")
-                for x in rows:
-                    f.write("\t".join(x[c] for c in header) + "\n")
+                f.writelines("\t".join(x[c] for c in header) + "\n" for x in rows)
             return p
         truth = tsv("t.tsv", sc.TRUTH_COLUMNS + ("true_productive",), self.truth)
         pred = tsv("p.tsv", PRED_COLUMNS, self.pred)

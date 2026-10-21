@@ -13,7 +13,7 @@ def read(*parts):
 
 
 def recipe(makefile, target):
-    m = re.search(rf"^{target}:.*\n((?:\t.*\n)+)", makefile, re.M)
+    m = re.search(rf"^{target}:.*\n((?:\t.*\n)+)", makefile, re.MULTILINE)
     return [line.strip() for line in m.group(1).splitlines()]
 
 
@@ -21,7 +21,7 @@ class WorkflowTest(unittest.TestCase):
     def test_known_answer_frees_disk_first(self):
         text = read(".github", "workflows", "ci.yml")
         job = text[text.index("  known-answer:"):]
-        first = re.search(r"^      - (.*)$", job, re.M).group(1)
+        first = re.search(r"^      - (.*)$", job, re.MULTILINE).group(1)
         self.assertEqual(first, "name: Free runner disk")
         step = job[:job.index("actions/checkout")]
         self.assertEqual(step.count("df -h /"), 2)

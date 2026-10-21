@@ -81,8 +81,7 @@ def main(argv):
         print(__doc__, file=sys.stderr)
         return 2
     with open(argv[1], "w") as fh:
-        for name, seq in convert(read_fasta(argv[0])):
-            fh.write(f">{name}\n{seq}\n")
+        fh.writelines(f">{name}\n{seq}\n" for name, seq in convert(read_fasta(argv[0])))
     return 0
 
 

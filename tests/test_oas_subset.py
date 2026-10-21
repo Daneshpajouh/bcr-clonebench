@@ -10,9 +10,14 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import oas_subset as osub  # noqa: E402
+import oas_subset as osub
 
 HEADER = ["sequence_id", "sequence", "productive", "v_call", "j_call", "junction"]
+
+
+def manifest(out):
+    with open(os.path.join(out, "manifest.json")) as fh:
+        return json.load(fh)
 
 
 def unit(path, subject, day, rows, isotype="IGHM"):
@@ -49,7 +54,7 @@ class Subset(unittest.TestCase):
         paths = self.write_subject("S1", osub.DAYS, n=10, extra=bad)
         out = self.p("out")
         osub.main([*paths, "--out", out, "--cap", "100"])
-        m = json.load(open(os.path.join(out, "manifest.json")))
+        m = manifest(out)
         c = m["days"]["Day-0"]
         self.assertEqual((c["rows_in"], c["not_productive"], c["no_v_j_or_junction"], c["duplicate_sequence"],
                           c["rows_out"], c["capped"]), (14, 1, 2, 1, 10, False))
@@ -74,7 +79,7 @@ class Subset(unittest.TestCase):
                  + self.write_subject("S3", osub.DAYS))
         out = self.p("out")
         osub.main([*paths, "--out", out])
-        self.assertEqual(json.load(open(os.path.join(out, "manifest.json")))["subject"], "S2")
+        self.assertEqual(manifest(out)["subject"], "S2")
         with self.assertRaises(SystemExit):
             osub.main([*paths, "--out", self.p("out2"), "--subject", "S1"])  # misses Day-28
 
@@ -84,7 +89,7 @@ class Subset(unittest.TestCase):
         unit(g, "S1", "Day-0", [row(k, seq=f"GGGG{k}") for k in range(4)], isotype="IGHG")
         out = self.p("out")
         osub.main([*paths, g, "--out", out])
-        self.assertEqual(json.load(open(os.path.join(out, "manifest.json")))["days"]["Day-0"]["rows_out"], 7)
+        self.assertEqual(manifest(out)["days"]["Day-0"]["rows_out"], 7)
 
     def test_missing_metadata_key_and_column_stop(self):
         path = self.p("bad.csv.gz")

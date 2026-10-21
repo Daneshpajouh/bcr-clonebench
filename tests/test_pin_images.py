@@ -8,7 +8,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import pin_images as pin  # noqa: E402
+import pin_images as pin
 
 A = "a" * 64
 B = "b" * 64
@@ -68,7 +68,7 @@ class PinImages(unittest.TestCase):
 
     def test_locked_digest_for_another_repository_is_refused(self):
         before = lock_text(f"psathyrella/partis@sha256:{C}")
-        rc, text, err = self.run_pin(before, self.found(C))
+        rc, text, _ = self.run_pin(before, self.found(C))
         self.assertNotEqual(rc, 0)
         self.assertEqual(text, before)
 

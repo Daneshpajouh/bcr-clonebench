@@ -21,7 +21,7 @@ def read(*parts):
 def container_modules():
     for name in sorted(os.listdir(os.path.join(ROOT, "modules"))):
         text = read("modules", name)
-        if re.search(r"^\s*container\s", text, re.M):
+        if re.search(r"^\s*container\s", text, re.MULTILINE):
             yield name, text
 
 
@@ -33,7 +33,7 @@ def body(text):
 
 def input_paths(text):
     block = text.split("input:", 1)[1].split("output:", 1)[0]
-    return re.findall(r"^\s*path\s+(\w+)\s*$", block, re.M)
+    return re.findall(r"^\s*path\s+(\w+)\s*$", block, re.MULTILINE)
 
 
 class StagedBinScripts(unittest.TestCase):
@@ -70,7 +70,7 @@ class StagedBinScripts(unittest.TestCase):
         allowed = {"argparse", "csv", "sys", "os", "re", "math", "random", "collections",
                    "itertools", "json", "gzip", "hashlib"}
         for script in ["airr_truth.py", "prepare_founders.py"]:
-            mods = re.findall(r"^(?:import|from)\s+(\w+)", read("bin", script), re.M)
+            mods = re.findall(r"^(?:import|from)\s+(\w+)", read("bin", script), re.MULTILINE)
             self.assertTrue(set(mods) <= allowed, (script, sorted(set(mods) - allowed)))
 
 

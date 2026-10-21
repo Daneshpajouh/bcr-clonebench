@@ -8,7 +8,7 @@ import unittest
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "bin"))
-import igblast_fasta as ig  # noqa: E402
+import igblast_fasta as ig
 
 # Header shape of the IMGT germline files the suite image ships.
 IMGT = (
@@ -43,17 +43,20 @@ class ConvertTest(unittest.TestCase):
         long_first_word = ">" + "A" * 53 + " rest\nacgt\n"
         self.assertGreater(len(long_first_word.split()[0]) - 1, ig.MAX_ID)
         rc, out, _ = self.run_on(IMGT + long_first_word.replace(">", ">X1|IGHV9-9*01|"))
+        self.assertEqual(rc, 0)
         ids = [line[1:] for line in out.splitlines() if line.startswith(">")]
         self.assertTrue(all(0 < len(i) <= ig.MAX_ID for i in ids))
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_plain_header_keeps_first_word(self):
         rc, out, _ = self.run_on(">IGHJ4*02 OGRDB\nACTACTTTGACTACTGG\n")
+        self.assertEqual(rc, 0)
         self.assertEqual(out, ">IGHJ4*02\nACTACTTTGACTACTGG\n")
 
     def test_same_name_same_sequence_kept_once(self):
         rc, out, _ = self.run_on(">a|IGHD1-1*01|x\nGGTACAACTGGAACGAC\n"
                                  ">b|IGHD1-1*01|y\nggtacaactggaacgac\n")
+        self.assertEqual(rc, 0)
         self.assertEqual(out.count(">"), 1)
 
     def test_same_name_other_sequence_stops(self):
@@ -81,7 +84,7 @@ class ConvertTest(unittest.TestCase):
             with open(src, "w") as fh:
                 fh.write(">x|" + "V" * 51 + "|y\nACGT\n")
             r = subprocess.run([sys.executable, "-B", os.path.join(ROOT, "bin", "igblast_fasta.py"),
-                                src, os.path.join(d, "out.fasta")], capture_output=True, text=True)
+                                src, os.path.join(d, "out.fasta")], capture_output=True, text=True, check=False)
             self.assertEqual(r.returncode, 1)
             self.assertIn("over 50 characters", r.stderr)
 

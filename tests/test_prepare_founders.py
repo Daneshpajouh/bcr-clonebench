@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import prepare_founders as pf  # noqa: E402
+import prepare_founders as pf
 
 GERM_V = "CAG" * 30 + "GTGTATTACTGTGCGAGAGA"  # cysteine codon TGT at 99..101, so v_end 102
 REST = "GGTTATTGGTTCGACCCCTGGGGCCAGGGAACC"  # an in-frame tail with no stop

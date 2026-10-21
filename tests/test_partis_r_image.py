@@ -18,12 +18,12 @@ def read(*parts):
 
 
 def arg(text, name):
-    m = re.search(rf"^ARG {name}=(\S+)$", text, re.M)
+    m = re.search(rf"^ARG {name}=(\S+)$", text, re.MULTILINE)
     return m.group(1) if m else None
 
 
 def make_target(text, name):
-    m = re.search(rf"^{name}:.*?\n((?:\t.*\n)+)", text, re.M)
+    m = re.search(rf"^{name}:.*?\n((?:\t.*\n)+)", text, re.MULTILINE)
     return m.group(1) if m else ""
 
 
@@ -106,7 +106,7 @@ class ModuleTest(unittest.TestCase):
     def setUp(self):
         text = read("modules", "lineages_partis.nf")
         script = text.split("script:", 1)[1].split("stub:", 1)[0]
-        self.partis_block = re.findall(r'"""(.*?)"""', script, re.S)[1]
+        self.partis_block = re.findall(r'"""(.*?)"""', script, re.DOTALL)[1]
 
     def test_missing_r_fails_fast_before_simulation(self):
         lines = [ln.strip() for ln in self.partis_block.strip().splitlines() if ln.strip()]

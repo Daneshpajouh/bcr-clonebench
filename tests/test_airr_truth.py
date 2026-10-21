@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import airr_truth as at  # noqa: E402
+import airr_truth as at
 
 
 def row(sid, clone, seq_aln, germ_aln, v_end, v="IGHV1-2*02,IGHV1-2*04"):
@@ -27,7 +27,7 @@ class Convert(unittest.TestCase):
 
     def test_first_call_and_truth(self):
         out = list(at.convert([row("s1", "c1", "ACGTACGTAC", "ACGTACGTAC", 10)], "low"))
-        sid, seq, t = out[0]
+        _, _, t = out[0]
         self.assertEqual((t["true_clone_id"], t["true_v_call"], t["true_mu_freq"], t["level"]),
                          ("c1", "IGHV1-2*02", "0.000000", "low"))
 
@@ -38,17 +38,16 @@ class Convert(unittest.TestCase):
                  ("maybe", "")]
         for value, want in cases:
             with self.subTest(value):
-                t = list(at.convert([{**base, "productive": value}], "low"))[0][2]
+                t = next(iter(at.convert([{**base, "productive": value}], "low")))[2]
                 self.assertEqual(t["true_productive"], want)
-        self.assertEqual(list(at.convert([base], "low"))[0][2]["true_productive"], "")  # column absent
+        self.assertEqual(next(iter(at.convert([base], "low")))[2]["true_productive"], "")  # column absent
 
     def test_refusals(self):
         bad = [row("s1", "c1", "ACGT", "ACG", 3), {**row("s2", "c1", "ACGT", "ACGT", 4), "v_alignment_end": ""},
                {**row("s3", "", "ACGT", "ACGT", 4)}]
         for r in bad:
-            with self.subTest(r["sequence_id"]):
-                with self.assertRaises(ValueError):
-                    list(at.convert([r], "low"))
+            with self.subTest(r["sequence_id"]), self.assertRaises(ValueError):
+                list(at.convert([r], "low"))
         with self.assertRaisesRegex(ValueError, "repeated"):
             list(at.convert([row("s1", "c", "ACGT", "ACGT", 4)] * 2, "low"))
 
@@ -110,9 +109,8 @@ class PartisShapedRows(unittest.TestCase):
                "lengths": {**good, "v_germline_alignment": good["v_germline_alignment"][:-1]},
                "not a slice": {**good, "v_germline_alignment": "A" * len(good["v_germline_alignment"])}}
         for name, r in bad.items():
-            with self.subTest(name):
-                with self.assertRaises(ValueError):
-                    list(at.convert([r], "low"))
+            with self.subTest(name), self.assertRaises(ValueError):
+                list(at.convert([r], "low"))
 
     def test_a_failed_read_prints_the_header_and_first_two_rows(self):
         rows = [partis_row(f"s{i}", "c1", "GGACTTACGTAGGG", "GGAGTTACTTTGCG", 2, 10) for i in range(3)]

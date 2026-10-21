@@ -14,13 +14,13 @@ import unittest
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "bin"))
-import score_clones as sc  # noqa: E402
+import score_clones as sc
 
 
 def stub_script(level, reads):
     with open(os.path.join(ROOT, "modules", "annotate.nf"), encoding="utf-8") as f:
         text = f.read()
-    body = re.search(r'^\s*stub:\s*\n\s*"""\n(.*?)\n\s*"""', text, re.S | re.M).group(1)
+    body = re.search(r'^\s*stub:\s*\n\s*"""\n(.*?)\n\s*"""', text, re.DOTALL | re.MULTILINE).group(1)
     escapes = {"t": "\t", "n": "\n"}  # Groovy string escapes; \\ to \ and \$ to $ keep the second character
     body = re.sub(r"\\(.)", lambda m: escapes.get(m.group(1), m.group(1)), body)
     return body.replace("${level}", level).replace("${reads}", reads)

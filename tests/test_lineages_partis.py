@@ -15,7 +15,7 @@ def script_blocks():
     with open(MODULE, encoding="utf-8") as f:
         text = f.read()
     script = text.split("script:", 1)[1].split("stub:", 1)[0]
-    return re.findall(r'"""(.*?)"""', script, re.S)
+    return re.findall(r'"""(.*?)"""', script, re.DOTALL)
 
 
 def lines(block):

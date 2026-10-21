@@ -3,13 +3,12 @@ every partis family uses one V allele, one J allele and one junction length. The
 partis simulate --help in the pinned image (CI run 18 results/tool-help)."""
 
 import os
-import re
 import sys
 import unittest
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "bin"))
-import summarize_scores as ss  # noqa: E402
+import summarize_scores as ss
 
 
 def read(*parts):

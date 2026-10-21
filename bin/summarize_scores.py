@@ -27,8 +27,12 @@ def row(score):
     level, _, rate = run.partition("_e")
     a = score["all"]
     why = score.get("dropped_by_reason")
-    kept = lambda k: (score.get(k) or {}).get("exact")  # noqa: E731
-    includes = lambda k: (score.get(k) or {}).get("includes_true")  # noqa: E731
+    def kept(k):
+        return (score.get(k) or {}).get("exact")
+
+    def includes(k):
+        return (score.get(k) or {}).get("includes_true")
+
     prod = score.get("productive_truth") or {}
     prod_all = prod.get("all") or {}
     return {"n_not_annotated": why.get("not_annotated", 0) if why is not None else None,
@@ -66,8 +70,7 @@ def main(argv=None):
     rows.sort(key=lambda r: (LEVEL_ORDER.get(r["level"], 9), r["error_rate"] or 0.0, r["method"]))
     with open(a.out_tsv, "w", encoding="utf-8") as f:
         f.write("\t".join(COLUMNS) + "\n")
-        for r in rows:
-            f.write("\t".join(fmt(r[c]) for c in COLUMNS) + "\n")
+        f.writelines("\t".join(fmt(r[c]) for c in COLUMNS) + "\n" for r in rows)
     with open(a.out_md, "w", encoding="utf-8") as f:
         f.write("| " + " | ".join(COLUMNS) + " |\n|" + "---|" * len(COLUMNS) + "\n")
         for r in rows:

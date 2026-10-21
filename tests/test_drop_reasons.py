@@ -7,9 +7,9 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import drop_reasons as dr  # noqa: E402
-import score_clones as sc  # noqa: E402
-import summarize_scores as ss  # noqa: E402
+import drop_reasons as dr
+import score_clones as sc
+import summarize_scores as ss
 
 HEAD = ("sequence_id", "v_call", "j_call", "junction", "productive")
 

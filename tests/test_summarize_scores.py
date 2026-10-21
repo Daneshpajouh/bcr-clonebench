@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import summarize_scores as ss  # noqa: E402
+import summarize_scores as ss
 
 
 def score(label, precision):

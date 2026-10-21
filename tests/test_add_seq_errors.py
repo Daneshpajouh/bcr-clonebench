@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin"))
-import add_seq_errors as ase  # noqa: E402
+import add_seq_errors as ase
 
 
 class Errors(unittest.TestCase):

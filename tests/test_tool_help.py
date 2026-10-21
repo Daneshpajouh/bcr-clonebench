@@ -4,7 +4,6 @@ the results (tool-help/), read from the image the run used (Director ruling
 image, and the partis option from partis --help, before a label goes in)."""
 
 import os
-import re
 import unittest
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")

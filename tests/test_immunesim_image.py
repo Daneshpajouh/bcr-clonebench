@@ -20,7 +20,7 @@ def read(name):
 
 
 def arg(dockerfile, name):
-    m = re.search(rf"^ARG {name}=(\S+)$", dockerfile, re.M)
+    m = re.search(rf"^ARG {name}=(\S+)$", dockerfile, re.MULTILINE)
     return m.group(1) if m else None
 
 
@@ -44,7 +44,7 @@ class DockerfileTest(unittest.TestCase):
         )
 
     def test_apt_lists_removed_in_same_layer(self):
-        layer = re.search(r"^RUN apt-get update.*?(?=^\S)", self.text, re.M | re.S).group(0)
+        layer = re.search(r"^RUN apt-get update.*?(?=^\S)", self.text, re.MULTILINE | re.DOTALL).group(0)
         self.assertIn("--no-install-recommends", layer)
         self.assertIn("rm -rf /var/lib/apt/lists/*", layer)
 
@@ -56,7 +56,7 @@ class DockerfileTest(unittest.TestCase):
 class InstallScriptTest(unittest.TestCase):
     def test_every_cran_import_listed(self):
         text = read("install.R")
-        block = re.search(r"cran_imports <- c\((.*?)\)", text, re.S).group(1)
+        block = re.search(r"cran_imports <- c\((.*?)\)", text, re.DOTALL).group(1)
         listed = set(re.findall(r'"([^"]+)"', block))
         self.assertEqual(listed, IMPORTS - {"grid", "Biostrings"})
         self.assertIn('BiocManager::install("Biostrings"', text)
