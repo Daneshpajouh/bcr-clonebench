@@ -10,7 +10,7 @@ PARTIS = $(shell awk -F'\t' '$$1=="partis_image"{print $$3}' images.lock)
 PARTIS_R = $(shell awk -F'\t' '$$1=="partis_r_image"{print $$3}' images.lock)
 REFERENCE ?= imgt
 
-.PHONY: test stub pin check-partis-r reference known-answer
+.PHONY: test stub pin check-partis-r reference known-answer mutation-tests
 
 test:
 	python3 -B -m unittest discover -s tests
@@ -48,6 +48,20 @@ check-partis-r:
 reference:
 	docker run --rm -u $$(id -u):$$(id -g) -v $(CURDIR):/work -w /work $(SUITE) bin/build_reference.sh $(REFERENCE) reference
 
-# The whole known-answer test in the pinned containers.
+# The whole known-answer test in the pinned containers, then the named checks
+# (conf/known_answer_floors.json) on its summary table.
+RUN = nextflow run main.nf -profile docker,test --suite_image $(SUITE) --immunesim_image $(IMMUNESIM) --partis_image $(PARTIS_R)
+CHECK = python3 bin/check_known_answer.py
 known-answer: reference
-	nextflow run main.nf -profile docker,test --suite_image $(SUITE) --immunesim_image $(IMMUNESIM) --partis_image $(PARTIS_R)
+	$(RUN)
+	$(CHECK) results/results.tsv conf/known_answer_floors.json
+
+# Mutation tests, after known-answer in the same folder (-resume reuses the
+# simulation): a deliberately wrong clone threshold and a deliberately wrong
+# germline set must each make their named check fail.
+mutation-tests:
+	$(RUN) -resume --threshold_override 0.5 --outdir results-mutant-threshold
+	$(CHECK) results-mutant-threshold/results.tsv conf/known_answer_floors.json --expect-fail KA-CHANGEO-PRECISION
+	docker run --rm -u $$(id -u):$$(id -g) -v $(CURDIR):/work -w /work $(SUITE) bin/build_reference.sh shuffled-v reference-mutant-germline reference 20261021
+	$(RUN) -resume --reference_dir $(CURDIR)/reference-mutant-germline --outdir results-mutant-germline
+	$(CHECK) results-mutant-germline/results.tsv conf/known_answer_floors.json --expect-fail KA-V-INCLUDES

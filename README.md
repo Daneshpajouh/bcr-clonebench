@@ -38,6 +38,12 @@ Beside the summary table, `results/reads/` holds one table per level, error rate
 
 The headline scores cover every simulated read. Where the simulator marks each read productive or not (partis does), the same clone and gene scores are also reported over the productive reads alone (n_truth_productive, pair_f1_productive, ari_productive). A productive read the pipeline drops still counts as its own clone there too.
 
+## Named checks and mutation tests
+
+`make known-answer` ends with eight named checks on the summary table (`bin/check_known_answer.py`, floors in `conf/known_answer_floors.json`): the true V and J genes are in the calls of the kept reads, exact V calls outside the shared setting, the pair precision of Change-O, hierarchical and identical grouping, Change-O's F1 on productive reads, and the hypermutation error. Each floor was set from CI run 20 of 2026-10-21 (test profile) with a margin, and the file records the value it was set from. The spectral rows have no floor: their collapse in the shared setting is a result, not a fault.
+
+`make mutation-tests` then checks that the checks can fail. It reruns the pipeline twice from the same simulation, once with a deliberately wrong clone threshold (0.5) and once against a deliberately wrong germline set (every V gene renamed to another gene, seeded), and passes only if KA-CHANGEO-PRECISION and KA-V-INCLUDES fail in turn.
+
 ## Two independent generators
 
 partis (optionally with its bcr-phylo mode) is the primary source of truth. A second generator, `bin/expand_lineages.py`, grows naive immuneSIM rearrangements into families on random lineage trees, with mutations weighted toward WRC and GYW hot spots and no stop codons. It is simpler than partis and is reported in its own rows (`--lineage_simulator inrepo`).
@@ -71,7 +77,8 @@ The subset is fixed by rule before any file is read (`bin/oas_subset.py`): the f
 | `make stub` | Nextflow, Java | Runs the pipeline wiring with no tools |
 | `make pin` | Docker | Pulls and builds the images and writes their digests to `images.lock`; stops, writing nothing, if a locked image's tag now points at another digest |
 | `make reference` | Docker | Builds the OGRDB human IGH germline reference in the suite image |
-| `make known-answer` | Docker, Nextflow | The whole known-answer test on the small test profile |
+| `make known-answer` | Docker, Nextflow | The whole known-answer test on the small test profile, then the named checks |
+| `make mutation-tests` | Docker, Nextflow | After `make known-answer`: a wrong threshold and a wrong germline set must each fail their named check |
 
 The full run uses 2,000 clonal families per level (`params.n_founders`); the test profile uses 60. Settings are in `nextflow.config`.
 

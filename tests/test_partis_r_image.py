@@ -95,7 +95,10 @@ class WiringTest(unittest.TestCase):
         self.assertIn("library(TreeSim)", check)
 
     def test_known_answer_uses_partis_r(self):
-        self.assertIn("--partis_image $(PARTIS_R)\n", make_target(self.make, "known-answer"))
+        # The run command is the RUN variable, shared with the mutation tests.
+        run = re.search(r"^RUN = (.*)$", self.make, re.MULTILINE).group(1)
+        self.assertTrue(run.endswith("--partis_image $(PARTIS_R)"))
+        self.assertIn("\t$(RUN)\n", make_target(self.make, "known-answer"))
 
     def test_lock_has_partis_r_row(self):
         rows = [ln.split("\t") for ln in read("images.lock").splitlines() if not ln.startswith("#")]

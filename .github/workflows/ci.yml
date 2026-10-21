@@ -54,11 +54,16 @@ jobs:
         run: make pin
       - name: Known-answer run
         run: make known-answer
+      - name: Mutation tests (a wrong threshold and a wrong germline set must be caught)
+        run: make mutation-tests
       - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: results
-          path: results/
+          path: |
+            results/
+            results-mutant-threshold/results.*
+            results-mutant-germline/results.*
       # CI run 10: a failed task left nothing to read; keep each task's script, logs and partis help text.
       # CI run 14: also keep the simulator's AIRR table, so a failed read of it can be checked by hand.
       - name: Keep the task folders' scripts and logs when a step failed

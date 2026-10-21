@@ -5,3 +5,5 @@ __pycache__/
 .nextflow*
 /reference/*
 !/reference/README.md
+/results-mutant-*/
+/reference-mutant-germline/

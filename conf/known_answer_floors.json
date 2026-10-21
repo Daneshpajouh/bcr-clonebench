@@ -1,0 +1,13 @@
+{
+  "_about": "Named known-answer checks on results.tsv. Floors were set from CI run 20 (2026-10-21, test profile) with a margin; the measured worst value is in 'seen'. A check applies to the rows its 'where' selects.",
+  "checks": [
+    {"name": "KA-V-INCLUDES", "metric": "v_gene_includes_true/kept", "min": 0.98, "where": {}, "seen": 0.99995},
+    {"name": "KA-J-INCLUDES", "metric": "j_gene_includes_true/kept", "min": 0.95, "where": {}, "seen": 0.98475},
+    {"name": "KA-V-EXACT", "metric": "v_gene_exact_kept", "min": 0.85, "where": {"shared": false}, "seen": 0.9324},
+    {"name": "KA-CHANGEO-PRECISION", "metric": "pair_precision", "min": 0.95, "where": {"method": "changeo"}, "seen": 0.9935},
+    {"name": "KA-HIERARCHICAL-PRECISION", "metric": "pair_precision", "min": 0.95, "where": {"method": "hierarchical"}, "seen": 0.9935},
+    {"name": "KA-IDENTICAL-PRECISION", "metric": "pair_precision", "min": 0.99, "where": {"method": "identical"}, "seen": 1.0},
+    {"name": "KA-CHANGEO-F1-PRODUCTIVE", "metric": "pair_f1_productive", "min": 0.6, "where": {"method": "changeo"}, "seen": 0.6966},
+    {"name": "KA-MU-ERROR", "metric": "mu_mae", "max": 0.02, "where": {}, "seen": 0.0049}
+  ]
+}

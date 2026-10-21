@@ -14,9 +14,15 @@ process THRESHOLD {
     tuple val(level), path(db), path("threshold_${level}.txt")
 
     script:
-    """
-    Rscript ${threshold_r} ${db} threshold_${level}.txt ${params.fallback_threshold}
-    """
+    if (params.threshold_override != null)
+        // mutation test only: a fixed, deliberately wrong threshold in place of SHazaM's
+        """
+        echo ${params.threshold_override} > threshold_${level}.txt
+        """
+    else
+        """
+        Rscript ${threshold_r} ${db} threshold_${level}.txt ${params.fallback_threshold}
+        """
 
     stub:
     """
