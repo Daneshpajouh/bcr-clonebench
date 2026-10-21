@@ -54,6 +54,24 @@ class Summary(unittest.TestCase):
             got = [(r["method"], r["n_truth_productive"], r["pair_f1_productive"], r["ari_productive"]) for r in rows]
             self.assertEqual(got, [("changeo", "8", "0.7500", "0.5000"), ("hierarchical", "NA", "NA", "NA")])
 
+    def test_includes_true_columns(self):
+        # A call that ties the true gene with an identical one (IGHV3-23 with IGHV3-23D) is never exact but does
+        # include the true gene; the table shows both, and NA when a score file predates the includes share.
+        with tempfile.TemporaryDirectory() as d:
+            tied = {**score("low_shared_e0.0/changeo", 1.0),
+                    "v_gene": {"exact": 0.0, "includes_true": 0.75}, "j_gene": {"exact": 0.7, "includes_true": 0.8}}
+            paths = []
+            for i, s in enumerate((tied, score("low_e0.0/changeo", 1.0))):
+                paths.append(os.path.join(d, f"s{i}.json"))
+                with open(paths[-1], "w") as f:
+                    json.dump(s, f)
+            tsv, md = os.path.join(d, "r.tsv"), os.path.join(d, "r.md")
+            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md] + paths), 0)
+            with open(tsv) as f:
+                rows = [dict(zip(ss.COLUMNS, line.rstrip("\n").split("\t"))) for line in list(f)[1:]]
+            got = [(r["level"], r["v_gene_exact"], r["v_gene_includes_true"], r["j_gene_includes_true"]) for r in rows]
+            self.assertEqual(got, [("low", "0.9000", "NA", "NA"), ("low_shared", "0.0000", "0.7500", "0.8000")])
+
 
 if __name__ == "__main__":
     unittest.main()

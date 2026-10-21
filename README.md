@@ -27,7 +27,7 @@ Every tool runs in a container named by digest in `images.lock`. The pipeline re
 ## What is scored
 
 - Clonal grouping: pairwise precision, recall and F1, and the adjusted Rand index (ARI).
-- V and J gene calls: share of reads with the true gene.
+- V and J gene calls: share of reads whose call is exactly the true gene, and share whose call includes the true gene among tied genes (`v_gene_includes_true`, `j_gene_includes_true`). The two differ when the aligner cannot tell two genes apart. In the shared setting, the CI run of 2026-10-20 called IGHV3-23 together with IGHV3-23D on almost every read, so exact V was near 0 while the true gene was in every kept read's call.
 - Hypermutation: mean absolute error of the per-read mutation frequency.
 - Diversity: Hill numbers (q = 0, 1 and 2) of the predicted clone sizes against the true ones.
 - Number of clones, true and predicted.

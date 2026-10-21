@@ -6,6 +6,8 @@
 Rows are sorted by mutation level (low, medium, high), then sequencing
 error rate, then method.
 Undefined values (no predicted pairs) are written as NA, never as 0.
+Gene calls are scored two ways over all reads: exact (the call names only
+the true gene) and includes_true (the true gene is among the tied calls).
 """
 
 import argparse
@@ -16,7 +18,8 @@ LEVEL_ORDER = {"low": 0, "medium": 1, "high": 2, "low_shared": 3, "medium_shared
 COLUMNS = ("level", "error_rate", "method", "n_truth", "n_dropped", "n_not_annotated", "n_not_productive",
            "n_dropped_later", "pair_precision", "predicted_pairs", "pair_recall", "pair_f1", "ari", "n_truth_productive",
            "pair_f1_productive", "ari_productive", "v_gene_exact",
-           "v_gene_exact_kept", "j_gene_exact", "j_gene_exact_kept", "mu_mae", "clones_true", "clones_predicted")
+           "v_gene_exact_kept", "j_gene_exact", "j_gene_exact_kept", "v_gene_includes_true", "j_gene_includes_true",
+           "mu_mae", "clones_true", "clones_predicted")
 
 
 def row(score):
@@ -25,6 +28,7 @@ def row(score):
     a = score["all"]
     why = score.get("dropped_by_reason")
     kept = lambda k: (score.get(k) or {}).get("exact")  # noqa: E731
+    includes = lambda k: (score.get(k) or {}).get("includes_true")  # noqa: E731
     prod = score.get("productive_truth") or {}
     prod_all = prod.get("all") or {}
     return {"n_not_annotated": why.get("not_annotated", 0) if why is not None else None,
@@ -36,6 +40,7 @@ def row(score):
             "pair_precision": a["pair_precision"], "pair_recall": a["pair_recall"], "pair_f1": a["pair_f1"],
             "ari": a["ari"], "n_truth_productive": prod.get("n_truth"), "pair_f1_productive": prod_all.get("pair_f1"),
             "ari_productive": prod_all.get("ari"), "v_gene_exact": score["v_gene"]["exact"], "j_gene_exact": score["j_gene"]["exact"],
+            "v_gene_includes_true": includes("v_gene"), "j_gene_includes_true": includes("j_gene"),
             "mu_mae": (score.get("mu_freq") or {}).get("mean_abs_error"),
             "clones_true": score["hill"]["q0"]["true"], "clones_predicted": score["hill"]["q0"]["predicted"]}
 
