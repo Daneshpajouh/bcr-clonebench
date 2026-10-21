@@ -8,9 +8,9 @@ SUITE = $(shell awk -F'\t' '$$1=="suite_image"{print $$3}' images.lock)
 IMMUNESIM = $(shell awk -F'\t' '$$1=="immunesim_image"{print $$3}' images.lock)
 PARTIS = $(shell awk -F'\t' '$$1=="partis_image"{print $$3}' images.lock)
 PARTIS_R = $(shell awk -F'\t' '$$1=="partis_r_image"{print $$3}' images.lock)
-REFERENCE ?= imgt
+REFERENCE ?= ogrdb
 
-.PHONY: test stub pin check-partis-r reference known-answer mutation-tests
+.PHONY: test stub pin pin-reference check-partis-r reference known-answer mutation-tests
 
 test:
 	python3 -B -m unittest discover -s tests
@@ -37,6 +37,13 @@ pin:
 	df -h /
 	$(MAKE) check-partis-r PARTIS_R_CHECK=$(PARTIS_R_TAG)
 	python3 bin/pin_images.py images.lock suite_image $(SUITE_TAG) immunesim_image $(IMMUNESIM_TAG) partis_image $(PARTIS_TAG) partis_r_image $(PARTIS_R_TAG)
+	$(MAKE) pin-reference
+
+# Download the OGRDB set named in reference.lock, check it against the MD5
+# Zenodo publishes, and write its SHA-256 into reference.lock if not yet
+# pinned. A pinned SHA-256 is never changed: a file that differs stops here.
+pin-reference:
+	python3 bin/fetch_ogrdb.py --pin reference.lock reference-src
 
 # R starts and TreeSim loads in the partis-r image, as the host user, the way
 # Nextflow runs it (docker.runOptions). PARTIS_R_CHECK defaults to the pinned one.
@@ -44,9 +51,16 @@ PARTIS_R_CHECK ?= $(PARTIS_R)
 check-partis-r:
 	docker run --rm -u $$(id -u):$$(id -g) $(PARTIS_R_CHECK) sh -c 'R --version && Rscript -e "library(TreeSim)"'
 
-# The germline reference, built inside the pinned suite image.
+# The germline reference, built inside the pinned suite image. The default is
+# the OGRDB set pinned in reference.lock (downloaded and checked on the host);
+# REFERENCE=imgt uses the IMGT set the suite image ships instead.
 reference:
+ifeq ($(REFERENCE),ogrdb)
+	python3 bin/fetch_ogrdb.py reference.lock reference-src
+	docker run --rm -u $$(id -u):$$(id -g) -v $(CURDIR):/work -w /work $(SUITE) bin/build_reference.sh ogrdb reference reference-src/IGHV.fasta reference-src/IGHD.fasta reference-src/IGHJ.fasta
+else
 	docker run --rm -u $$(id -u):$$(id -g) -v $(CURDIR):/work -w /work $(SUITE) bin/build_reference.sh $(REFERENCE) reference
+endif
 
 # The whole known-answer test in the pinned containers, then the named checks
 # (conf/known_answer_floors.json) on its summary table.

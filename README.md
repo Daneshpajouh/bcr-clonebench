@@ -9,12 +9,14 @@ It is a benchmark harness, not a new grouping method.
 - Built and unit-tested: the scorer, the truth converters, the second lineage generator, sequencing-error injection and the summary table (`make test`).
 - The whole Nextflow pipeline runs end to end in stub mode (`make stub`), which checks the wiring without running any tool.
 - Not yet done: the first run in the pinned containers, so there are no benchmark numbers in this repository yet. The real-data run (below) has not started. Results will be added here when they exist, with the exact command and image digests that produced them.
+- The CI runs up to 2026-10-21 annotated against the IMGT set that the suite image ships. The OGRDB set is now the default (`make reference`); no run on it has finished yet.
+- Truth allele names come from the simulator's own germline set. A true allele that the OGRDB set lacks, or names differently, counts as a wrong V or J call, so part of a V or J miss may come from naming alone. This repository does not yet count how many true alleles are absent from the reference.
 
 ## How it works
 
 1. **Simulate clonal families.** partis simulates human IGH clonal families from scratch at three hypermutation levels (low, medium, high), and writes the true family, genes and mutation state of every read. With `--shared_vj true` each level also runs in a harder setting, `<level>_shared`, where every family uses the same V allele, the same J allele and the same junction length (partis `--only-genes` and `--allowed-cdr3-lengths`, defaults `IGHV3-23*01:IGHJ4*02` and 48 nucleotides), so unrelated families look alike and a method can wrongly merge them.
 2. **Add sequencing errors.** Each level is copied at each sequencing-error rate (0, 0.1 and 0.5 percent per base by default). The errors are kept out of the truth: they are noise the pipeline has to see through.
-3. **Annotate.** IgBLAST assigns V, D and J genes against the OGRDB human IGH germline set, and Change-O writes an AIRR table.
+3. **Annotate.** IgBLAST assigns V, D and J genes against the OGRDB human IGH germline set (version 10, pinned in `reference.lock`), and Change-O writes an AIRR table.
 4. **Pick a clustering threshold.** SHazaM estimates the distance threshold from the data. If it finds none, a fixed fallback is used and the run says so.
 5. **Group into clones** with five methods: Change-O DefineClones at the SHazaM threshold, and SCOPer identical, hierarchical, spectral on the junction alone (`spectral`, SCOPer method `novj`) and spectral with the mutations shared in V and J (`spectral_vj`, method `vj`). Both spectral rows are kept because, in the shared V/J setting, the junction-only call puts nearly all reads in a few clones; the second row shows whether that is the method or the option. DefineClones and SCOPer hierarchical are one method in two implementations: single-linkage clustering of junctions by length-normalized Hamming distance at the same threshold (DefineClones' `--link` defaults to single in the pinned suite image, as its own `--help` says; the SCOPer call sets `linkage = "single"`). Their agreement is a check on the pipeline, not a second result.
 6. **Estimate hypermutation** per read with SHazaM.
@@ -76,7 +78,8 @@ The subset is fixed by rule before any file is read (`bin/oas_subset.py`): the f
 | `make test` | Python 3 | Unit tests, standard library only |
 | `make stub` | Nextflow, Java | Runs the pipeline wiring with no tools |
 | `make pin` | Docker | Pulls and builds the images and writes their digests to `images.lock`; stops, writing nothing, if a locked image's tag now points at another digest |
-| `make reference` | Docker | Builds the OGRDB human IGH germline reference in the suite image |
+| `make pin-reference` | Python 3, network | Downloads the OGRDB set named in `reference.lock`, checks it against the MD5 Zenodo publishes and writes its SHA-256 there if not yet pinned (`make pin` runs it too); a pinned SHA-256 is never changed |
+| `make reference` | Docker, network | Downloads the pinned OGRDB human IGH germline set (version 10), stops unless its MD5 and SHA-256 match `reference.lock`, and builds the reference in the suite image; `REFERENCE=imgt` uses the IMGT set the suite image ships instead |
 | `make known-answer` | Docker, Nextflow | The whole known-answer test on the small test profile, then the named checks |
 | `make mutation-tests` | Docker, Nextflow | After `make known-answer`: a wrong threshold and a wrong germline set must each fail their named check |
 
@@ -86,7 +89,7 @@ The full run uses 2,000 clonal families per level (`params.n_founders`); the tes
 
 - partis and immuneSIM: GPL-3.0. They run in their own containers and are not copied into this repository.
 - immuneSIM is no longer on CRAN: it was archived on 2025-06-12 because e-mail to its maintainer was undeliverable (https://CRAN.R-project.org/package=immuneSIM). The image installs its last release, 0.8.7 (packaged 2019-09-20), from the CRAN archive and stops if the file does not match a fixed SHA-256. Its imports come from a CRAN snapshot of 2025-04-10 and Bioconductor 3.20, the last Bioconductor release for R 4.4. See `containers/immunesim/`.
-- OGRDB human IGH germline set: CC0.
+- OGRDB human IGH germline set, IGH_VDJ version 10 (2026-05-27; Zenodo, https://doi.org/10.5281/zenodo.20409587): CC0 1.0, as the record's licence.txt states. It is downloaded at run time, not copied into this repository.
 - OAS data: CC BY 4.0, with credit to the original study.
 
 ## References

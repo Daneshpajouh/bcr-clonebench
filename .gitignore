@@ -7,3 +7,4 @@ __pycache__/
 !/reference/README.md
 /results-mutant-*/
 /reference-mutant-germline/
+/reference-src/

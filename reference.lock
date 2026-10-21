@@ -1,0 +1,7 @@
+# The OGRDB germline set the pipeline uses, pinned to one published version.
+# Source: OGRDB, Homo sapiens IGH_VDJ release version 10 (2026-05-27), Zenodo
+# record 10.5281/zenodo.20409587, licence CC0 1.0 (licence.txt in the record).
+# The MD5 is the one Zenodo publishes for the file. The SHA-256 is written by
+# 'make pin-reference' at the first download and is never changed after that.
+# Columns: key, version, url, md5, sha256 (tab-separated).
+ogrdb_igh_vdj	10	https://zenodo.org/records/20409587/files/Homo_sapiens_IGH_VDJ_rev_10_gapped.fasta?download=1	md5:72f5e8eced4b7fe4e5536ce40b07ea99	sha256:not-yet-pinned
