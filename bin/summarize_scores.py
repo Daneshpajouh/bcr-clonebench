@@ -8,6 +8,8 @@ error rate, then method.
 Undefined values (no predicted pairs) are written as NA, never as 0.
 Gene calls are scored two ways over all reads: exact (the call names only
 the true gene) and includes_true (the true gene is among the tied calls).
+Diversity: clones_true and clones_predicted are the Hill numbers at q = 0;
+hill_q1_* and hill_q2_* give q = 1 and q = 2.
 """
 
 import argparse
@@ -19,7 +21,8 @@ COLUMNS = ("level", "error_rate", "method", "n_truth", "n_dropped", "n_not_annot
            "n_dropped_later", "pair_precision", "predicted_pairs", "pair_recall", "pair_f1", "ari", "n_truth_productive",
            "pair_f1_productive", "ari_productive", "v_gene_exact",
            "v_gene_exact_kept", "j_gene_exact", "j_gene_exact_kept", "v_gene_includes_true", "j_gene_includes_true",
-           "mu_mae", "clones_true", "clones_predicted")
+           "mu_mae", "clones_true", "clones_predicted", "hill_q1_true", "hill_q1_predicted", "hill_q2_true",
+           "hill_q2_predicted")
 
 
 def row(score):
@@ -46,7 +49,9 @@ def row(score):
             "ari_productive": prod_all.get("ari"), "v_gene_exact": score["v_gene"]["exact"], "j_gene_exact": score["j_gene"]["exact"],
             "v_gene_includes_true": includes("v_gene"), "j_gene_includes_true": includes("j_gene"),
             "mu_mae": (score.get("mu_freq") or {}).get("mean_abs_error"),
-            "clones_true": score["hill"]["q0"]["true"], "clones_predicted": score["hill"]["q0"]["predicted"]}
+            "clones_true": score["hill"]["q0"]["true"], "clones_predicted": score["hill"]["q0"]["predicted"],
+            **{f"hill_q{q}_{side}": (score["hill"].get(f"q{q}") or {}).get(side)
+               for q in (1, 2) for side in ("true", "predicted")}}
 
 
 def fmt(v):

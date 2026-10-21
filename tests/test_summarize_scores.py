@@ -73,5 +73,27 @@ class Summary(unittest.TestCase):
             self.assertEqual(got, [("low", "0.9000", "NA", "NA"), ("low_shared", "0.0000", "0.7500", "0.8000")])
 
 
+    def test_hill_q1_q2_columns(self):
+        # Diversity is scored at q = 0, 1 and 2; q0 is the clone count, q1 and q2 get their own columns,
+        # and NA when a score file has no q1 or q2 (or no predicted clones).
+        with tempfile.TemporaryDirectory() as d:
+            full = {**score("low_e0.0/changeo", 1.0),
+                    "hill": {"q0": {"true": 4.0, "predicted": 5.0}, "q1": {"true": 3.5, "predicted": 4.25},
+                             "q2": {"true": 3.0, "predicted": None}}}
+            paths = []
+            for i, s in enumerate((full, score("low_e0.0/hierarchical", 1.0))):
+                paths.append(os.path.join(d, f"s{i}.json"))
+                with open(paths[-1], "w") as f:
+                    json.dump(s, f)
+            tsv, md = os.path.join(d, "r.tsv"), os.path.join(d, "r.md")
+            self.assertEqual(ss.main(["--out-tsv", tsv, "--out-md", md] + paths), 0)
+            with open(tsv) as f:
+                rows = [dict(zip(ss.COLUMNS, line.rstrip("\n").split("\t"))) for line in list(f)[1:]]
+            cols = ("clones_true", "clones_predicted", "hill_q1_true", "hill_q1_predicted", "hill_q2_true",
+                    "hill_q2_predicted")
+            got = [(r["method"], *(r.get(c) for c in cols)) for r in rows]
+            self.assertEqual(got, [("changeo", "4.0000", "5.0000", "3.5000", "4.2500", "3.0000", "NA"),
+                                   ("hierarchical", "4.0000", "5.0000", "NA", "NA", "NA", "NA")])
+
 if __name__ == "__main__":
     unittest.main()
