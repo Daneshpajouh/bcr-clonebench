@@ -6,11 +6,22 @@ It is a benchmark harness, not a new grouping method.
 
 ## Status
 
-- Built and unit-tested: the scorer, the truth converters, the second lineage generator, sequencing-error injection and the summary table (`make test`).
-- The whole Nextflow pipeline runs end to end in stub mode (`make stub`), which checks the wiring without running any tool.
-- Not yet done: the first run in the pinned containers, so there are no benchmark numbers in this repository yet. The real-data run (below) has not started. Results will be added here when they exist, with the exact command and image digests that produced them.
+What runs today:
+
+- Unit tests for the scorer, the truth converters, the second lineage generator, sequencing-error injection and the summary table (`make test`), and the whole Nextflow pipeline in stub mode (`make stub`), which checks the wiring without running any tool.
+- `make known-answer` in CI on every change, in the pinned containers, on the small `test` profile only: 60 founder families, the low and high hypermutation levels, sequencing error rates 0 and 0.005, with shared and with separate V and J genes. It ends with the named checks and the mutation tests below. These runs check the harness; they are not the benchmark, and their numbers are not reported here as results.
+
+Not done yet, so this repository has no benchmark results:
+
+- The medium hypermutation level has not run in any setting (the `test` profile runs low and high only).
+- The full-size run with the default parameters has not run.
+- The real-data run on Galson et al. (2015), below, has not started.
+- There is no written report yet; the output is the summary table `results/results.tsv`. A Quarto report is planned.
+- Diversity is scored by this repository's own Hill numbers (q = 0, 1 and 2, `bin/score_clones.py`). Alakazam's diversity curves are not in the pipeline.
 - The CI runs up to 2026-10-21 annotated against the IMGT set that the suite image ships. The OGRDB set is now the default (`make reference`); no run on it has finished yet.
 - Truth allele names come from the simulator's own germline set. A true allele that the OGRDB set lacks, or names differently, counts as a wrong V or J call, so part of a V or J miss may come from naming alone. This repository does not yet count how many true alleles are absent from the reference.
+
+Results will be added here when they exist, with the exact command and image digests that produced them.
 
 ## How it works
 
