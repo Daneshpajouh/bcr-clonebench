@@ -9,12 +9,12 @@ It is a benchmark harness, not a new grouping method.
 What runs today:
 
 - Unit tests for the scorer, the truth converters, the second lineage generator, sequencing-error injection and the summary table (`make test`), and the whole Nextflow pipeline in stub mode (`make stub`), which checks the wiring without running any tool.
-- `make known-answer` in CI on every change, in the pinned containers, on the small `test` profile only: 60 founder families, the low and high hypermutation levels, sequencing error rates 0 and 0.005, with shared and with separate V and J genes. It ends with the named checks and the mutation tests below. These runs check the harness; they are not the benchmark, and their numbers are not reported here as results.
+- `make known-answer` in CI on every change, in the pinned containers, on the small `test` profile only: 60 founder families, the low, medium and high hypermutation levels, sequencing error rates 0 and 0.005, with shared and with separate V and J genes. It ends with the named checks and the mutation tests below. These runs check the harness; they are not the benchmark, and their numbers are not reported here as results.
 
 Not done yet, so this repository has no benchmark results:
 
-- The medium hypermutation level has not run in any setting (the `test` profile runs low and high only).
-- The full-size run with the default parameters has not run.
+- The medium hypermutation level is now in the `test` profile, so CI runs it on every change; no CI run with it has finished yet.
+- The full-size run with the default parameters has not run. It is `make full`, run by hand in CI (the workflow `full`).
 - The real-data run on Galson et al. (2015), below, has not started.
 - There is no written report yet; the output is the summary table `results/results.tsv`. A Quarto report is planned.
 - Diversity is scored by this repository's own Hill numbers (q = 0, 1 and 2, `bin/score_clones.py`). Alakazam's diversity curves are not in the pipeline.
@@ -93,6 +93,7 @@ The subset is fixed by rule before any file is read (`bin/oas_subset.py`): the f
 | `make reference` | Docker, network | Downloads the pinned OGRDB human IGH germline set (version 10), stops unless its MD5 and SHA-256 match `reference.lock`, and builds the reference in the suite image; `REFERENCE=imgt` uses the IMGT set the suite image ships instead |
 | `make known-answer` | Docker, Nextflow | The whole known-answer test on the small test profile, then the named checks |
 | `make mutation-tests` | Docker, Nextflow | After `make known-answer`: a wrong threshold and a wrong germline set must each fail their named check |
+| `make full` | Docker, Nextflow | The full-size run with the default parameters into `results-full`, then the same named checks |
 
 The full run uses 2,000 clonal families per level (`params.n_founders`); the test profile uses 60. Settings are in `nextflow.config`.
 

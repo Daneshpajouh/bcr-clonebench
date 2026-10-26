@@ -10,7 +10,7 @@ PARTIS = $(shell awk -F'\t' '$$1=="partis_image"{print $$3}' images.lock)
 PARTIS_R = $(shell awk -F'\t' '$$1=="partis_r_image"{print $$3}' images.lock)
 REFERENCE ?= ogrdb
 
-.PHONY: test stub pin pin-reference check-partis-r reference known-answer mutation-tests
+.PHONY: test stub pin pin-reference check-partis-r reference known-answer mutation-tests full
 
 test:
 	python3 -B -m unittest discover -s tests
@@ -79,3 +79,11 @@ mutation-tests:
 	docker run --rm -u $$(id -u):$$(id -g) -v $(CURDIR):/work -w /work $(SUITE) bin/build_reference.sh shuffled-v reference-mutant-germline reference 20261021
 	$(RUN) -resume --reference_dir $(CURDIR)/reference-mutant-germline --outdir results-mutant-germline
 	$(CHECK) results-mutant-germline/results.tsv conf/known_answer_floors.json --expect-fail KA-V-INCLUDES
+
+# The full-size run with the default parameters (2,000 founder families per level, the three levels, the three
+# sequencing error rates), in the pinned containers, into results-full; then the same named checks on its table.
+# Run by the manual 'full' workflow in CI (its time on a hosted runner is not measured yet).
+FULL = nextflow run main.nf -profile docker --suite_image $(SUITE) --immunesim_image $(IMMUNESIM) --partis_image $(PARTIS_R) --outdir results-full
+full: reference
+	$(FULL)
+	$(CHECK) results-full/results.tsv conf/known_answer_floors.json

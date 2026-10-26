@@ -1,0 +1,53 @@
+name: full
+
+# The full-size run with the default parameters, started by hand only (Actions, "full", Run workflow): it is much
+# longer than the known-answer run on every change. Same pinned containers and checks; the results are kept as an
+# artifact whether it passes or not.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      # A hosted runner has too little free disk for the two pulled images plus
+      # the R build, so drop preinstalled toolchains this job never uses.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af
+          df -h /
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: nf-core/setup-nextflow@v3
+      - name: Build the immuneSIM image and check the locked digests (stops if a tag moved)
+        run: make pin
+      - name: Full-size run on the default parameters
+        run: make full
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: results-full
+          path: |
+            results-full/
+            .nextflow.log
+      - name: Keep the task folders' scripts and logs when a step failed
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: failed-task-logs-full
+          path: |
+            work/**/.command.sh
+            work/**/.command.err
+            work/**/.command.out
+            work/**/.command.log
+          if-no-files-found: warn
+          retention-days: 7
