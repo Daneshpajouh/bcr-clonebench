@@ -11,16 +11,77 @@ What runs today:
 - Unit tests for the scorer, the truth converters, the second lineage generator, sequencing-error injection and the summary table (`make test`), and the whole Nextflow pipeline in stub mode (`make stub`), which checks the wiring without running any tool.
 - `make known-answer` in CI on every change, in the pinned containers, on the small `test` profile only: 60 founder families, the low, medium and high hypermutation levels, sequencing error rates 0 and 0.005, with shared and with separate V and J genes. It ends with the named checks and the mutation tests below. These runs check the harness; they are not the benchmark, and their numbers are not reported here as results. The first run with all three levels passed on 2026-10-25: [run 40251896057](https://github.com/Daneshpajouh/bcr-clonebench/actions/runs/40251896057) on commit bb6adb1, jobs unit, pipeline-stub and known-answer.
 
-Not done yet, so this repository has no benchmark results:
+- One full-size run with the default parameters has finished; its results are below.
 
-- The full-size run with the default parameters has not finished. It is `make full`, run by hand in CI (the workflow `full`).
+Not done yet:
+
 - The real-data run on Galson et al. (2015), below, has not started.
 - There is no written report yet; the output is the summary table `results/results.tsv`. A Quarto report is planned.
 - Diversity is scored by this repository's own Hill numbers (q = 0, 1 and 2, `bin/score_clones.py`). Alakazam's diversity curves are not in the pipeline.
-- The CI runs up to 2026-10-21 annotated against the IMGT set that the suite image ships. The OGRDB set is now the default (`make reference`); no run on it has finished yet.
+- The CI runs up to 2026-10-21 annotated against the IMGT set that the suite image ships. The OGRDB set is now the default (`make reference`); the full-size run below used it.
 - Truth allele names come from the simulator's own germline set. A true allele that the OGRDB set lacks, or names differently, counts as a wrong V or J call, so part of a V or J miss may come from naming alone. This repository does not yet count how many true alleles are absent from the reference.
 
-Results will be added here when they exist, with the exact command and image digests that produced them.
+## Results: the first full-size run
+
+One run, on simulated data only. It is a first measurement, not a ranking of the tools.
+
+- Run: [GitHub Actions run 40254568784](https://github.com/Daneshpajouh/bcr-clonebench/actions/runs/40254568784), attempt 2, workflow `full`, commit bb6adb1, 2026-10-26 01:46 to 02:34 UTC (2026-10-25 18:46 to 19:34 PT). Attempt 1 failed in its full-size step on an HTTP 500 from Zenodo during the germline set download; the download now retries (`bin/fetch_ogrdb.py`).
+- Command: `make full`, which ran
+  `nextflow run main.nf -profile docker --suite_image immcantation/suite@sha256:ec1281cdbf239f5d4b6dbb7c6527169e69a919fe34567bb20bfee96b4bddcc7c --immunesim_image sha256:f8593237d177c66c29665d676ef452eea826e00a91fb622a2d0eda48d1d5eabe --partis_image sha256:f5d8d4f2033a63fc88bec269d94502ebd0a87d62ab6e7e3066e2559cce2a1cc3 --outdir results-full`.
+  The suite image is pinned by digest in `images.lock`. The immuneSIM image and the partis image with R (built FROM `quay.io/matsengrp/partis@sha256:4fad317c02debd098bcf71a1a85c8d29fd5a1ab8fe92d5da556d49b85e8eed31`) were built in the job; the two `sha256:` values above are their image IDs in this run, not yet pinned in `images.lock`.
+- Germline set: OGRDB IGH_VDJ version 10 (209 IGHV, 33 IGHD, 7 IGHJ), checked against `reference.lock`.
+- Nextflow: 166 tasks succeeded in 34 min 41 s, 2.3 CPU hours.
+- Scale: 2,000 founder families per hypermutation level, each level at three sequencing error rates.
+- The eight named checks all passed. The worst value of each: V call includes the true gene 0.9997 (floor 0.98), J 0.9956 (0.95), exact V on kept reads 0.9462 (0.85), pair precision 0.9744 for Change-O and for hierarchical (0.95) and 1.0000 for identical (0.99), Change-O pair F1 on productive reads 0.8907 (0.6), hypermutation mean absolute error 0.0050 (at most 0.02).
+
+Reads and drops, per level and error rate (the same for every method):
+
+| Level | Error (%) | Reads | Productive (truth) | Dropped, not productive | Dropped, not annotated |
+|---|---|---|---|---|---|
+| low | 0 | 8,292 | 6,617 | 1,557 | 0 |
+| low | 0.1 | 8,292 | 6,617 | 1,678 | 0 |
+| low | 0.5 | 8,292 | 6,617 | 2,095 | 0 |
+| medium | 0 | 8,292 | 4,451 | 3,671 | 7 |
+| medium | 0.1 | 8,292 | 4,451 | 3,742 | 8 |
+| medium | 0.5 | 8,292 | 4,451 | 4,018 | 7 |
+| high | 0 | 8,292 | 3,015 | 5,051 | 47 |
+| high | 0.1 | 8,292 | 3,015 | 5,088 | 50 |
+| high | 0.5 | 8,292 | 3,015 | 5,282 | 54 |
+
+Pair F1, productive reads:
+
+| Level | Error (%) | changeo | hierarchical | spectral | spectral_vj | identical |
+|---|---|---|---|---|---|---|
+| low | 0 | 0.9997 | 0.9997 | 0.9238 | 0.9361 | 0.7628 |
+| low | 0.1 | 0.9811 | 0.9811 | 0.8971 | 0.9121 | 0.7001 |
+| low | 0.5 | 0.9072 | 0.9075 | 0.7959 | 0.8052 | 0.4696 |
+| medium | 0 | 0.9963 | 0.9961 | 0.8398 | 0.8437 | 0.5232 |
+| medium | 0.1 | 0.9732 | 0.9730 | 0.8230 | 0.8203 | 0.4766 |
+| medium | 0.5 | 0.8941 | 0.8928 | 0.7145 | 0.7162 | 0.2983 |
+| high | 0 | 0.9853 | 0.9853 | 0.7661 | 0.7756 | 0.3380 |
+| high | 0.1 | 0.9671 | 0.9671 | 0.7373 | 0.7471 | 0.3075 |
+| high | 0.5 | 0.8907 | 0.8907 | 0.6423 | 0.6421 | 0.1864 |
+
+Pair F1, all reads:
+
+| Level | Error (%) | changeo | hierarchical | spectral | spectral_vj | identical |
+|---|---|---|---|---|---|---|
+| low | 0 | 0.8305 | 0.8305 | 0.7583 | 0.7694 | 0.6079 |
+| low | 0.1 | 0.8126 | 0.8126 | 0.7330 | 0.7464 | 0.5504 |
+| low | 0.5 | 0.7440 | 0.7443 | 0.6399 | 0.6480 | 0.3581 |
+| medium | 0 | 0.5826 | 0.5824 | 0.4599 | 0.4634 | 0.2536 |
+| medium | 0.1 | 0.5677 | 0.5675 | 0.4466 | 0.4454 | 0.2272 |
+| medium | 0.5 | 0.5085 | 0.5080 | 0.3756 | 0.3758 | 0.1356 |
+| high | 0 | 0.3919 | 0.3919 | 0.2641 | 0.2690 | 0.0980 |
+| high | 0.1 | 0.3824 | 0.3824 | 0.2518 | 0.2568 | 0.0890 |
+| high | 0.5 | 0.3340 | 0.3340 | 0.2078 | 0.2083 | 0.0497 |
+What these numbers show, and no more:
+
+- Identical grouping had pair precision 1.0000 in all nine settings and the lowest pair F1 on productive reads in all nine.
+- Change-O DefineClones and SCOPer hierarchical gave the same pair precision, recall, F1 and ARI in five of the nine settings. The highest pair F1 on productive reads was Change-O's in eight settings (tied with hierarchical in five of them) and hierarchical's alone in one (low, 0.5 %).
+- Pair F1 on all reads is lower than on productive reads in every setting, and falls from low to medium to high hypermutation for every method and error rate. The reads dropped as not productive rise the same way (table above), and every dropped read counts as its own clone (see "What is scored"); this run does not measure how much of the fall each cause explains.
+
+What this run does not show: anything about real repertoires; spread across seeds (one run, one seed); run time per tool; whether the drops match the simulator's own productive flag read by read (the per-read tables in `results-full/reads/` hold that). The full table is the run's artifact `results-full` (`results.tsv` and `results.md`).
 
 ## How it works
 
