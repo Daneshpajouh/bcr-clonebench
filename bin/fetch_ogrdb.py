@@ -17,10 +17,18 @@ The OGRDB set is one gapped FASTA holding V, D and J. V keeps its IMGT gap
 dots (MakeDb and CreateGermlines need them); D and J are written without
 dots. A record that is not IGHV, IGHD or IGHJ, or a segment with no record,
 stops the split.
+
+A download that fails with HTTP 5xx, a connection error or a timeout is tried
+again, five attempts in all, after 15, 30, 60 and 120 s, with one line on
+standard error per retry. HTTP 4xx is not retried. The digest checks are the
+same on every attempt and still stop the run.
 """
 import hashlib
 import os
+import socket
 import sys
+import time
+import urllib.error
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,6 +37,7 @@ from igblast_fasta import allele_name, read_fasta
 KEY = "ogrdb_igh_vdj"
 NOT_PINNED = "sha256:not-yet-pinned"
 SEGMENTS = ("IGHV", "IGHD", "IGHJ")
+BACKOFF_S = (15, 30, 60, 120)  # waits between the five attempts
 
 
 def read_lock(path):
@@ -77,6 +86,26 @@ def check_digests(data, row):
     return sha256
 
 
+def download(url, backoff=BACKOFF_S, sleep=time.sleep, timeout=120):
+    """The body at url. HTTP 5xx, connection errors and timeouts are retried after each wait in backoff; HTTP 4xx
+    and the last failure raise ValueError."""
+    for attempt in range(len(backoff) + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as resp:  # fixed URL from the lock
+                return resp.read()
+        except urllib.error.HTTPError as err:
+            if err.code < 500:
+                raise ValueError(f"download got HTTP {err.code} {err.reason}; not retried") from err
+            why = f"HTTP {err.code} {err.reason}"
+        except (urllib.error.URLError, TimeoutError, socket.timeout, ConnectionError) as err:
+            why = f"{type(err).__name__}: {getattr(err, 'reason', err)}"
+        if attempt == len(backoff):
+            raise ValueError(f"download failed after {attempt + 1} attempts; last: {why}")
+        print(f"fetch_ogrdb.py: attempt {attempt + 1} of {len(backoff) + 1} failed ({why}); "
+              f"retrying in {backoff[attempt]} s", file=sys.stderr, flush=True)
+        sleep(backoff[attempt])
+
+
 def split(records):
     """[(header, seq)] -> {segment: [(allele, seq)]}; V gapped, D and J without dots."""
     parts = {s: [] for s in SEGMENTS}
@@ -108,8 +137,7 @@ def main(argv):
     if row["sha256"] == NOT_PINNED and not pin:
         print(f"{KEY}: SHA-256 not yet pinned; run 'make pin-reference' first", file=sys.stderr)
         return 1
-    with urllib.request.urlopen(row["url"], timeout=120) as resp:  # fixed URL from the lock
-        data = resp.read()
+    data = download(row["url"])
     sha256 = check_digests(data, row)
     if pin and row["sha256"] == NOT_PINNED:
         write_sha256(lock, sha256)
