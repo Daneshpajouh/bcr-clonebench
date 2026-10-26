@@ -9,12 +9,11 @@ It is a benchmark harness, not a new grouping method.
 What runs today:
 
 - Unit tests for the scorer, the truth converters, the second lineage generator, sequencing-error injection and the summary table (`make test`), and the whole Nextflow pipeline in stub mode (`make stub`), which checks the wiring without running any tool.
-- `make known-answer` in CI on every change, in the pinned containers, on the small `test` profile only: 60 founder families, the low, medium and high hypermutation levels, sequencing error rates 0 and 0.005, with shared and with separate V and J genes. It ends with the named checks and the mutation tests below. These runs check the harness; they are not the benchmark, and their numbers are not reported here as results.
+- `make known-answer` in CI on every change, in the pinned containers, on the small `test` profile only: 60 founder families, the low, medium and high hypermutation levels, sequencing error rates 0 and 0.005, with shared and with separate V and J genes. It ends with the named checks and the mutation tests below. These runs check the harness; they are not the benchmark, and their numbers are not reported here as results. The first run with all three levels passed on 2026-10-25: [run 40251896057](https://github.com/Daneshpajouh/bcr-clonebench/actions/runs/40251896057) on commit bb6adb1, jobs unit, pipeline-stub and known-answer.
 
 Not done yet, so this repository has no benchmark results:
 
-- The medium hypermutation level is now in the `test` profile, so CI runs it on every change; no CI run with it has finished yet.
-- The full-size run with the default parameters has not run. It is `make full`, run by hand in CI (the workflow `full`).
+- The full-size run with the default parameters has not finished. It is `make full`, run by hand in CI (the workflow `full`).
 - The real-data run on Galson et al. (2015), below, has not started.
 - There is no written report yet; the output is the summary table `results/results.tsv`. A Quarto report is planned.
 - Diversity is scored by this repository's own Hill numbers (q = 0, 1 and 2, `bin/score_clones.py`). Alakazam's diversity curves are not in the pipeline.
